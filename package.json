@@ -1,0 +1,23 @@
+{
+  "name": "arabic-trivia-game",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "node scripts/validate-bank.mjs && npm run check && vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "validate:bank": "node scripts/validate-bank.mjs"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.1.0",
+    "svelte": "^5.20.0",
+    "svelte-check": "^4.2.0",
+    "typescript": "^5.8.0",
+    "vite": "^6.2.0"
+  }
+}

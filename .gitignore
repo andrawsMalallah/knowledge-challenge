@@ -1,0 +1,11 @@
+node_modules/
+dist/
+output/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+
+.local-backups/
+docs/QUESTION_BANK_VALIDATION.json
+*.log
