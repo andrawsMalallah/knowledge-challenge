@@ -218,7 +218,7 @@ Rules:
 - IDs are stable lowercase English slugs, starting with a letter, containing letters/digits and single hyphens between segments.
 - Category IDs are unique; subcategory IDs are unique within their main category.
 - `tiebreakers` is reserved for the dedicated tiebreaker bank.
-- Display names must be Arabic. English folder/ID slugs are allowed.
+- Display names may use Arabic or Latin letters, preserving original titles where appropriate. Folder/ID slugs remain English.
 - Do not add question paths or other metadata. Paths are derived from IDs.
 
 The example maps to:
@@ -369,7 +369,7 @@ There is **no** `schemaVersion`, `published`, `explanation`, per-question catego
 - Use Arabic names/transliterations rather than Latin text, including foreign people, places, films and brands.
 - Numbers and punctuation are allowed. Numeric answers may be written as text using digits.
 - Verify factual accuracy and avoid duplicate or near-duplicate questions. Validation checks structure and duplicate normalized prompts within a pool; it does not fact-check answers or prove semantic uniqueness.
-- Category display names must also be Arabic. IDs/folder names remain stable English slugs.
+- Category display names may use Arabic or Latin letters. Questions and answers remain Arabic; IDs/folder names remain stable English slugs.
 
 ### Text now; normal media later
 

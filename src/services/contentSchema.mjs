@@ -6,16 +6,21 @@ function arabicText(value) {
   return typeof value === 'string' && value.trim().length > 0 && /[\p{L}\p{N}]/u.test(value) &&
     [...value].every(character => !/\p{L}/u.test(character) || /\p{Script=Arabic}/u.test(character));
 }
+// Catalog titles may retain original Latin names; question/answer language stays Arabic.
+function categoryName(value) {
+  return typeof value === 'string' && value.trim().length > 0 && /[\p{L}\p{N}]/u.test(value) &&
+    [...value].every(character => !/\p{L}/u.test(character) || /[\p{Script=Arabic}\p{Script=Latin}]/u.test(character));
+}
 function exactKeys(value, allowed) { return Object.keys(value).every(key => allowed.includes(key)); }
 export function parseCategoryTree(value) {
   if (!isObject(value) || !exactKeys(value,['categories']) || !Array.isArray(value.categories) || value.categories.length > 500) throw Error('فهرس التصنيفات غير صالح');
   const ids = new Set();
   return value.categories.map(category => {
-    if (!isObject(category) || !exactKeys(category,['id','name','subcategories']) || typeof category.id !== 'string' || !SLUG.test(category.id) || category.id === 'tiebreakers' || ids.has(category.id) || !arabicText(category.name) || !Array.isArray(category.subcategories) || category.subcategories.length > 1000) throw Error('بيانات التصنيف الرئيسي غير صالحة');
+    if (!isObject(category) || !exactKeys(category,['id','name','subcategories']) || typeof category.id !== 'string' || !SLUG.test(category.id) || category.id === 'tiebreakers' || ids.has(category.id) || !categoryName(category.name) || !Array.isArray(category.subcategories) || category.subcategories.length > 1000) throw Error('بيانات التصنيف الرئيسي غير صالحة');
     ids.add(category.id);
     const subIds = new Set();
     return {id:category.id,name:category.name,subcategories:category.subcategories.map(subcategory => {
-      if (!isObject(subcategory) || !exactKeys(subcategory,['id','name']) || typeof subcategory.id !== 'string' || !SLUG.test(subcategory.id) || subIds.has(subcategory.id) || !arabicText(subcategory.name)) throw Error('بيانات التصنيف الفرعي غير صالحة');
+      if (!isObject(subcategory) || !exactKeys(subcategory,['id','name']) || typeof subcategory.id !== 'string' || !SLUG.test(subcategory.id) || subIds.has(subcategory.id) || !categoryName(subcategory.name)) throw Error('بيانات التصنيف الفرعي غير صالحة');
       subIds.add(subcategory.id);
       return {id:subcategory.id,name:subcategory.name};
     })};
