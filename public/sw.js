@@ -19,6 +19,17 @@ async function serveCached(event, cacheable) {
   if (response.ok && cacheable) event.waitUntil(cacheResponse(event.request, response.clone()));
   return response;
 }
+
+async function serveNavigation(request) {
+  const cached = await cachedResponse('/index.html') || await cachedResponse('/');
+  if (!cached) return fetch(request);
+  // Static hosts may redirect index.html to /. A followed redirect cannot be
+  // replayed for a navigation request (redirect mode "manual"). Preserve the
+  // HTML and security headers while removing the cached redirect history.
+  return cached.redirected
+    ? new Response(cached.body, {status:cached.status, statusText:cached.statusText, headers:cached.headers})
+    : cached;
+}
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)));
 });
@@ -44,7 +55,7 @@ self.addEventListener('fetch', event => {
     return;
   }
   if (event.request.mode === 'navigate') {
-    event.respondWith(cachedResponse('/index.html').then(cached => cached || fetch(event.request)));
+    event.respondWith(serveNavigation(event.request));
     return;
   }
   event.respondWith(serveCached(event, ['script','style','font','image'].includes(event.request.destination)));

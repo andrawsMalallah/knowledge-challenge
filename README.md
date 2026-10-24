@@ -472,6 +472,16 @@ Before the test sources were removed, the existing 100 unit/contract tests and b
 
 Do not commit `node_modules/`, `dist/`, generated reports, local backups, logs, private exports or environment files.
 
+## Deploy to any static host
+
+Build with `npm ci` followed by `npm run build`, then publish the contents of `dist/` at the domain root. This works with static hosting on Cloudflare Workers/Pages, Render, Netlify, or a standard web server; no provider-specific runtime is required. On Render, use a Static Site with build command `npm ci && npm run build` and publish directory `dist`. On Cloudflare Workers, configure static assets to serve `dist`.
+
+Use HTTPS so browser storage locks and the service worker are available. Serve JavaScript, CSS, JSON and the manifest with their correct MIME types. Keep `/sw.js` revalidating rather than giving it long-lived immutable caching. Hosts that do not interpret `public/_headers` need equivalent security/cache headers configured in their own settings. The app currently expects deployment at the domain root, rather than a URL subdirectory.
+
+Both direct `/index.html` responses and redirects from `/index.html` to `/` are supported. Verify the first load, repeated refreshes after service-worker activation, and an offline refresh on the deployed origin.
+
+After deploying a service-worker fix, an existing broken installation may need one hard refresh (Ctrl+Shift+R) to load the new version, followed by accepting the update on Home. Export important saves when possible before troubleshooting; do not clear site data, because that also removes local matches.
+
 ## Deploy to Cloudflare Pages
 
 This is **plain Svelte + Vite**, not SvelteKit. Use the explicit settings below rather than a preset that expects server output.
