@@ -1,0 +1,137 @@
+[
+  {
+    "id": 1,
+    "slug": "general-knowledge",
+    "name": "معلومات عامة"
+  },
+  {
+    "id": 2,
+    "slug": "football",
+    "name": "كرة القدم"
+  },
+  {
+    "id": 3,
+    "slug": "sports",
+    "name": "رياضات متنوعة"
+  },
+  {
+    "id": 4,
+    "slug": "movies-and-tv",
+    "name": "معلومات الأفلام والمسلسلات"
+  },
+  {
+    "id": 5,
+    "slug": "movies",
+    "name": "أفلام وسلاسل سينمائية"
+  },
+  {
+    "id": 6,
+    "slug": "tv-series",
+    "name": "مسلسلات"
+  },
+  {
+    "id": 7,
+    "slug": "anime-and-cartoons",
+    "name": "أنمي وكرتون"
+  },
+  {
+    "id": 8,
+    "slug": "video-games",
+    "name": "ألعاب فيديو"
+  },
+  {
+    "id": 9,
+    "slug": "history-and-civilizations",
+    "name": "تاريخ وحضارات"
+  },
+  {
+    "id": 10,
+    "slug": "geography-and-countries",
+    "name": "جغرافيا ودول"
+  },
+  {
+    "id": 11,
+    "slug": "science-and-nature",
+    "name": "علوم وطبيعة"
+  },
+  {
+    "id": 12,
+    "slug": "animals",
+    "name": "حيوانات"
+  },
+  {
+    "id": 13,
+    "slug": "space-and-astronomy",
+    "name": "فضاء وفلك"
+  },
+  {
+    "id": 14,
+    "slug": "music-and-arts",
+    "name": "موسيقى وفنون"
+  },
+  {
+    "id": 15,
+    "slug": "food-and-cooking",
+    "name": "طعام ومطبخ"
+  },
+  {
+    "id": 16,
+    "slug": "riddles-and-brain-teasers",
+    "name": "ألغاز وتحديات ذهنية"
+  },
+  {
+    "id": 17,
+    "slug": "technology-and-inventions",
+    "name": "تكنولوجيا وإنترنت"
+  },
+  {
+    "id": 18,
+    "slug": "landmarks-and-antiquities",
+    "name": "معالم وآثار"
+  },
+  {
+    "id": 19,
+    "slug": "health-and-human-body",
+    "name": "صحة وجسم الإنسان"
+  },
+  {
+    "id": 20,
+    "slug": "language-culture-and-literature",
+    "name": "لغة وثقافة وأدب"
+  },
+  {
+    "id": 21,
+    "slug": "mythology",
+    "name": "أساطير"
+  },
+  {
+    "id": 22,
+    "slug": "cars-and-vehicles",
+    "name": "سيارات ومركبات"
+  },
+  {
+    "id": 23,
+    "slug": "companies-and-brands",
+    "name": "شركات وعلامات تجارية"
+  },
+  {
+    "id": 24,
+    "slug": "emoji-quizzes",
+    "name": "خمن من الإيموجي"
+  },
+  {
+    "id": 25,
+    "slug": "professions",
+    "name": "مهن ووظائف"
+  },
+  {
+    "id": 26,
+    "slug": "inventions-and-inventors",
+    "name": "اختراعات ومخترعون"
+  },
+  {
+    "id": 27,
+    "slug": "strange-facts-and-records",
+    "name": "حقائق غريبة وأرقام قياسية"
+  }
+]

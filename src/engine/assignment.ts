@@ -50,7 +50,12 @@ export function assignBalanced(categories: Category[], questions: Question[], ra
   for (const cat of categories) for (const points of tiers) {
     const eligible = questions.filter(q => q.categoryId === cat.id && q.points === points && allowedDifficulty[points].includes(q.difficultyLevel));
     const groups = new Map<number, Question[]>();
-    for (const q of eligible) groups.set(q.difficultyLevel, [...(groups.get(q.difficultyLevel) ?? []), q]);
+    // Append in place to avoid repeatedly copying large difficulty pools.
+    for (const question of eligible) {
+      const group=groups.get(question.difficultyLevel);
+      if(group)group.push(question);
+      else groups.set(question.difficultyLevel,[question]);
+    }
     const matchedGroups = [...groups.values()].filter(group => group.length >= 2);
     if (!matchedGroups.length) throw new Error(`التصنيف ${cat.name} يفتقر إلى سؤالين متوازنين لفئة ${points}`);
     const groupIndex = Math.floor(random() * matchedGroups.length);

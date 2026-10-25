@@ -9,3 +9,6 @@ output/
 .local-backups/
 docs/QUESTION_BANK_VALIDATION.json
 *.log
+
+.generated/
+.playwright-cli/

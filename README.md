@@ -53,7 +53,7 @@ Open http://127.0.0.1:4173/. Production preview enables the PWA/service worker a
 | `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` | Serve the production build locally. |
 | `npm audit` | Check the locked dependencies against npm advisories. |
 
-Tests, test fixtures, test dependencies and GitHub CI workflows are intentionally absent at the owner's request. The build still blocks invalid content and type/Svelte errors.
+The historical gameplay test suite and GitHub CI remain absent. Focused database migration checks use Node's built-in test runner: `node --test scripts/database.test.mjs`. No test dependency is needed. The build blocks invalid content and type/Svelte errors.
 
 ## How a match works
 
@@ -133,233 +133,96 @@ The installation manifest is `public/manifest.webmanifest`. It defines the app's
 
 ## Project and content folders
 
+`database/` is the editable database. Each JSON file is an array of rows, like a database table:
+
 ```text
-knowledge-challenge/
-├── .node-version
-├── index.html
-├── package.json
-├── package-lock.json
-├── README.md
-├── scripts/
-│   └── validate-bank.mjs
-├── src/
-│   ├── App.svelte
-│   ├── components/
-│   ├── engine/
-│   ├── services/
-│   ├── styles/
-│   └── types/
-└── public/
-    ├── _headers
-    ├── manifest.webmanifest
-    ├── sw.js
-    ├── fonts/
-    ├── images/
-    │   └── icons/
-    └── data/
-        ├── categories.json
-        ├── questions/
-        │   ├── normal/
-        │   │   └── <category>/
-        │   │       └── <subcategory>/
-        │   │           └── questions.json
-        │   └── tiebreaker/
-        │       └── questions.json
-        ├── images/
-        │   └── <category>/<subcategory>/
-        └── audio/
-            └── <category>/<subcategory>/
+database/
+  categories.json
+  subcategories.json
+  questions.json
+storage/
+  images/
+    icons/          # App icons
+    questions/      # Reserved for future question images
+  audio/            # Reserved for future question audio
+public/
+  _headers
+  manifest.webmanifest
+  sw.js
+  fonts/
 ```
 
 - `src/engine/`: question assignment, scoring, lifelines, timers, corrections and shootout transitions.
 - `src/services/`: catalog/content parsing, storage, backups, preparation, tab control and update handling.
-- `public/data/`: **all deployed question-related data**, including future question images/audio.
-- `public/images/icons/`: app icons only.
-- `scripts/validate-bank.mjs`: build-time content validator, using the same source-schema rules as the browser.
-- `dist/`: generated deployment output; ignored by Git.
-- `docs/QUESTION_BANK_VALIDATION.json`: generated local validation report; ignored by Git and not deployed.
+- `scripts/database.mjs`: validates table relationships and compiles runtime content.
+- `scripts/validate-bank.mjs`: generates the local `docs/QUESTION_BANK_VALIDATION.json` report.
+- `.generated/public/`: disposable compiled catalog, question pools/chunks and copied public/storage assets. Never edit this folder; it is ignored by Git.
+- `dist/`: production deployment output; ignored by Git. Source database files are not deployed.
 
-Empty reserved directories are tracked with empty `.gitkeep` files. These are folder placeholders, not content. There are no shards, per-pool manifests or separate generated category trees.
+Vite compiles the database for both development and production. During development it watches the source tables and assets and reloads after valid changes. Invalid edits are reported in the terminal; the last successfully compiled content remains available until they are fixed.
+
+Storage icons are served at the same `/images/icons/` URLs as before. Future question images map to `/images/questions/`, and audio to `/audio/`. The folders do not enable media questions yet. Empty reserved folders contain `.gitkeep` placeholders, excluded from generated output.
 
 ## Category catalog
 
-`public/data/categories.json` starts as:
+`database/categories.json`:
 
 ```json
-{
-  "categories": []
-}
+[
+  { "id": 1, "slug": "general-knowledge", "name": "معلومات عامة" }
+]
 ```
 
-A populated example:
+`database/subcategories.json`:
 
 ```json
-{
-  "categories": [
-    {
-      "id": "general-knowledge",
-      "name": "معلومات عامة",
-      "subcategories": [
-        {
-          "id": "mixed",
-          "name": "معلومات متنوعة"
-        }
-      ]
-    }
-  ]
-}
+[
+  { "id": 1, "category_id": 1, "slug": "mixed", "name": "معلومات متنوعة" }
+]
 ```
 
-Only categories and subcategories declared here appear in the app. Adding folders alone does not add a selection.
+IDs are positive safe integers, unique within each table. Every subcategory must reference an existing category. Category slugs are unique globally; subcategory slugs are unique within their parent. Slugs are lowercase English letters/digits with single hyphens between segments, starting with a letter. The category slug `tiebreakers` is reserved.
 
-Rules:
-
-- Exactly two levels; subcategories cannot contain children.
-- IDs are stable lowercase English slugs, starting with a letter, containing letters/digits and single hyphens between segments.
-- Category IDs are unique; subcategory IDs are unique within their main category.
-- `tiebreakers` is reserved for the dedicated tiebreaker bank.
-- Display names may use Arabic or Latin letters, preserving original titles where appropriate. Folder/ID slugs remain English.
-- Do not add question paths or other metadata. Paths are derived from IDs.
-
-The example maps to:
-
-```text
-public/data/questions/normal/general-knowledge/mixed/questions.json
-```
-
-A main category can have any supported number of subcategories; a match selects subcategories, not whole main categories.
+Keep IDs and slugs stable. Display names may contain Arabic or Latin letters, including original franchise titles. The existing catalog retains its 27 main categories and 191 subcategories. No extra manually maintained totals or nested rows are needed.
 
 ## Unified question-file shape
 
-Normal and tiebreaker files use the **same fields**. All questions for one normal subcategory, across all tiers, live in one `questions.json`.
-
-### Normal subcategory example
-
-This six-record example supplies the minimum balanced inventory for one subcategory. It is documentation only; the repository's actual bank remains empty.
+`database/questions.json` holds **all normal questions and tiebreakers** in one array. The actual bank remains empty. This example shows the row shapes only:
 
 ```json
-{
-  "category": "general-knowledge",
-  "subcategory": "mixed",
-  "totalQuestions": 6,
-  "questions": [
-    {
-      "id": 1,
-      "points": 200,
-      "difficultyLevel": 1,
-      "question": "كم عدد أيام الأسبوع؟",
-      "answer": "سبعة أيام",
-      "format": "text",
-      "image_path": null,
-      "audio_path": null,
-      "image_alt": null
-    },
-    {
-      "id": 2,
-      "points": 200,
-      "difficultyLevel": 1,
-      "question": "ما عاصمة العراق؟",
-      "answer": "بغداد",
-      "format": "text",
-      "image_path": null,
-      "audio_path": null,
-      "image_alt": null
-    },
-    {
-      "id": 3,
-      "points": 400,
-      "difficultyLevel": 2,
-      "question": "ما الكوكب الذي يعرف بالكوكب الأحمر؟",
-      "answer": "المريخ",
-      "format": "text",
-      "image_path": null,
-      "audio_path": null,
-      "image_alt": null
-    },
-    {
-      "id": 4,
-      "points": 400,
-      "difficultyLevel": 2,
-      "question": "ما العنصر الكيميائي الذي عدده الذري ثمانية؟",
-      "answer": "الأكسجين",
-      "format": "text",
-      "image_path": null,
-      "audio_path": null,
-      "image_alt": null
-    },
-    {
-      "id": 5,
-      "points": 600,
-      "difficultyLevel": 3,
-      "question": "من مؤلف كتاب المقدمة؟",
-      "answer": "ابن خلدون",
-      "format": "text",
-      "image_path": null,
-      "audio_path": null,
-      "image_alt": null
-    },
-    {
-      "id": 6,
-      "points": 600,
-      "difficultyLevel": 3,
-      "question": "ما اسم تحول المادة من الحالة الصلبة إلى الغازية مباشرة؟",
-      "answer": "التسامي",
-      "format": "text",
-      "image_path": null,
-      "audio_path": null,
-      "image_alt": null
-    }
-  ]
-}
+[
+  {
+    "id": 1,
+    "subcategory_id": 1,
+    "type": "normal",
+    "points": 200,
+    "difficultyLevel": 1,
+    "question": "كم عدد أيام الأسبوع؟",
+    "answer": "سبعة أيام",
+    "format": "text",
+    "image_path": null,
+    "audio_path": null
+  },
+  {
+    "id": 2,
+    "subcategory_id": null,
+    "type": "tiebreaker",
+    "points": 0,
+    "difficultyLevel": 4,
+    "question": "ما اسم الوحدة الدولية لقياس النشاط الإشعاعي؟",
+    "answer": "البيكريل",
+    "format": "text",
+    "image_path": null,
+    "audio_path": null
+  }
+]
 ```
 
-### Dedicated tiebreaker file
+Normal rows require an existing numeric `subcategory_id`; tiebreakers require `null`. The main category is derived through the subcategory. Question IDs are globally unique across both types. Optional `image_alt` must currently be omitted or null. Additional fields are rejected.
 
-The actual `public/data/questions/tiebreaker/questions.json` starts as:
+The compiler checks primary/foreign keys, source content rules and normalized duplicate prompts within each pool. It generates the existing runtime catalog and per-subcategory payloads, splitting pools above 1,000 questions into numbered chunks with a manifest. The browser fetches only selected normal pools and the tiebreaker pool, not the complete database. All chunks of a selected pool are loaded to preserve balanced random selection; extremely large individual pools still need corresponding browser memory.
 
-```json
-{
-  "category": "tiebreakers",
-  "subcategory": null,
-  "totalQuestions": 0,
-  "questions": []
-}
-```
-
-When adding questions, each record has this shape:
-
-```json
-{
-  "id": 1,
-  "points": 0,
-  "difficultyLevel": 4,
-  "question": "ما اسم وحدة قياس الاستضاءة في النظام الدولي؟",
-  "answer": "اللوكس",
-  "format": "text",
-  "image_path": null,
-  "audio_path": null,
-  "image_alt": null
-}
-```
-
-Update `totalQuestions` to match the complete array. Tiebreaker `points:0` means no regular-game points; the shootout separately counts correct attempts.
-
-### Field reference
-
-| Field | Normal | Tiebreaker |
-| --- | --- | --- |
-| `category` | Main-category ID matching folders/catalog | Always `"tiebreakers"` |
-| `subcategory` | Subcategory ID matching folders/catalog | Always `null` |
-| `totalQuestions` | Actual array length | Actual array length |
-| `id` | Positive numeric integer, unique within this file | Same |
-| `points` | `200`, `400` or `600` | `0` |
-| `difficultyLevel` | Integer `1–5`, subject to gameplay compatibility below | `4` or `5` |
-| `question`, `answer` | Arabic text | Arabic text |
-| `format` | Currently `"text"` | Always `"text"` |
-| `image_path`, `audio_path` | Required; currently `null` | Required; always `null` |
-| `image_alt` | Optional; currently omitted or `null` | Optional; omitted or `null` |
-
-There is **no** `schemaVersion`, `published`, `explanation`, per-question category field or extra review/source metadata in source JSON.
+The build reads the source tables in memory. Chunking bounds individual browser payloads; it does not make the source JSON a streaming database. Saved session version 1 and backup formats remain unchanged, including frozen legacy questions and media.
 
 ## Question rules
 
@@ -378,23 +241,21 @@ There is **no** `schemaVersion`, `published`, `explanation`, per-question catego
 The directories below are reserved for **future normal-question** media:
 
 ```text
-public/data/images/<category>/<subcategory>/
-public/data/audio/<category>/<subcategory>/
+storage/images/questions/
+storage/audio/
 ```
 
-A future path would start with `/data/images/...` or `/data/audio/...`. Uploading a file or filling a path does not enable media questions today: the validator rejects non-text records. Supporting them later requires deliberate playback/rendering, validation, accessible alternatives, preparation and offline/backup work.
+A future path would start with `/images/questions/...` or `/audio/...`. Uploading a file or filling a path does not enable media questions today: the validator rejects non-text records. Supporting them later requires deliberate playback/rendering, validation, accessible alternatives, preparation and offline/backup work.
 
 **Tiebreakers will always remain text only.** Images, audio and other media formats are not planned for that pool. Existing image support in the application is retained only for compatibility with older frozen saves/backups.
 
 ### IDs, counts and file limits
 
-- IDs are JSON numbers: `1`, not `"1"`. Use positive safe integers.
-- IDs must be unique within each file. Different subcategories may each contain question `1`.
-- Keep IDs stable when reordering/removing questions; do not renumber old questions to close gaps.
-- Internally the app scopes normal identities by category/subcategory/ID and tiebreakers separately, preserving save/backup compatibility.
-- `totalQuestions` must exactly equal `questions.length`.
-- Files may contain 0–1,000 questions and must be no larger than 25 MiB.
-- Keep one UTF-8 JSON file per pool. Do not add manifests, part files or unlisted question files.
+- Use positive safe integer IDs, not strings. Never reuse or renumber existing IDs.
+- Question IDs must be globally unique in `database/questions.json`.
+- Do not add `totalQuestions` to source tables; the compiler calculates totals.
+- Generated question chunks contain at most 1,000 questions and at most 25 MiB each.
+- Runtime identities retain the existing category/subcategory/question namespace; active saves remain frozen.
 
 ### Normal difficulty and playable inventory
 
@@ -422,25 +283,14 @@ Two distinct questions are needed per selected attempt per team: 2 for one attem
 
 ## Add or update content
 
-1. Add the main category and its subcategories to `public/data/categories.json`.
-2. Create exactly one `questions.json` for each declared subcategory under `public/data/questions/normal/<category>/<subcategory>/`.
-3. Fill the file with Arabic text records, stable numeric IDs, matching category bindings and correct totals.
-4. Populate `public/data/questions/tiebreaker/questions.json` separately, preferably with at least ten distinct questions.
-5. Run:
+1. Add main category rows to `database/categories.json`.
+2. Add subcategory rows referencing their parent IDs to `database/subcategories.json`.
+3. Add Arabic normal and tiebreaker rows to `database/questions.json`. Keep IDs stable and unique; use null subcategory IDs for tiebreakers.
+4. Run `npm run validate:bank`, `node --test scripts/database.test.mjs`, and `npm run build`.
+5. Review `docs/QUESTION_BANK_VALIDATION.json` for insufficient balanced pools, excluded ratings and tiebreaker capacity.
+6. Preview the production build and check category selection, match creation, scoring, shootout, backups and offline recovery.
 
-   ```powershell
-   npm run validate:bank
-   npm run check
-   npm run build
-   ```
-
-6. Read the console and generated `docs/QUESTION_BANK_VALIDATION.json`. Fix structural errors. Review warnings about insufficient balanced pools, excluded ratings and tiebreaker capacity.
-7. Preview the production build. Check category counts/search, create a fresh match and verify its questions, regular scoring and a shootout.
-8. Commit the source changes and push when ready. Deploy the new build and accept its app-update prompt from Home.
-
-The validator never rewrites catalog/question source files. It validates only declared pools and rejects unexpected files under `public/data/`, except the three empty reserved-folder `.gitkeep` placeholders.
-
-Existing matches retain frozen content; updating a JSON file does not replace questions in an active save. New Game uses the new bank and clears the previous match under the documented behavior.
+Validation never rewrites source tables. Development and builds regenerate `.generated/public/`; commit source tables and storage assets only when publication is authorized. Existing matches retain frozen content. Start a new game to use updated questions.
 
 ## Build and release checks
 
@@ -468,9 +318,9 @@ Use a disposable browser profile for a walkthrough. Check:
 - Backup export/import, refresh recovery, offline recovery and safe second-tab takeover.
 - Naturally completed results without removed lifeline/question summaries.
 
-Before the test sources were removed, the existing 100 unit/contract tests and browser journeys were executed. The repository intentionally does not retain an automated test command or CI. Deployment still needs verification on the intended domain and actual Android/iOS devices.
+Before the test sources were removed, the existing 100 unit/contract tests and browser journeys were executed. The historical gameplay suite remains absent; the focused database checks above cover the new content pipeline. CI remains unconfigured. Deployment still needs verification on the intended domain and actual Android/iOS devices.
 
-Do not commit `node_modules/`, `dist/`, generated reports, local backups, logs, private exports or environment files.
+Do not commit `node_modules/`, `dist/`, `.generated/`, browser artifacts, generated reports, local backups, logs, private exports or environment files.
 
 ## Deploy to any static host
 
@@ -500,7 +350,7 @@ This is **plain Svelte + Vite**, not SvelteKit. Use the explicit settings below 
    | Node version | `24.19.0` via checked-in `.node-version`; set `NODE_VERSION=24.19.0` if an explicit dashboard override is needed |
 
 4. Save and deploy. Cloudflare installs the locked npm dependencies and runs the build.
-5. Open the HTTPS deployment. Confirm that the app loads and its intentionally empty catalog disables game creation.
+5. Open the HTTPS deployment. Confirm that the app loads and its intentionally empty question bank disables game creation.
 6. Inspect the served security/cache headers and verify that `/sw.js`, `/manifest.webmanifest` and `/data/categories.json` are accessible.
 7. Add an optional custom domain in Pages. Export any match you need before switching origins.
 
@@ -516,10 +366,10 @@ Official references: [Pages Git integration](https://developers.cloudflare.com/p
 
 | Symptom | Check |
 | --- | --- |
-| No categories appear | An empty catalog is intentional initially. Add two-level entries to `public/data/categories.json`; folders alone do not appear. |
+| No categories appear | An empty catalog is intentional initially. Add related rows to `database/categories.json` and `database/subcategories.json`; folders alone do not appear. |
 | Create Game is disabled | Select the chosen 4/6/8 subcategories and provide enough tiebreakers for the selected attempts. |
 | Creation reports insufficient normal questions | Supply a matched pair at each 200/400/600 tier and check their allowed difficulty. |
-| Validation rejects a question | Check numeric IDs, totals, category bindings, Arabic-only text, `format:"text"` and null media paths. |
+| Validation rejects a question | Check unique numeric IDs, foreign keys, question type, Arabic-only text, `format:"text"` and null media paths. |
 | Changed JSON does not affect the current match | Saved questions are frozen. Accept the app update on Home and start a new game for new content. |
 | Old interface remains after deployment | Return Home and accept the waiting update. Check a private profile to distinguish cache state from a broken deployment. Export saves before clearing site data. |
 | Read-only tab overlay | Return to the controlling tab or use the safe takeover action. Ensure HTTPS/localhost and Web Locks support. |

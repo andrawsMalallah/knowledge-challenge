@@ -1,0 +1,1148 @@
+[
+  {
+    "id": 1,
+    "category_id": 1,
+    "slug": "mixed",
+    "name": "معلومات متنوعة"
+  },
+  {
+    "id": 2,
+    "category_id": 2,
+    "slug": "players",
+    "name": "لاعبو كرة القدم"
+  },
+  {
+    "id": 3,
+    "category_id": 2,
+    "slug": "clubs",
+    "name": "أندية كرة القدم"
+  },
+  {
+    "id": 4,
+    "category_id": 2,
+    "slug": "competitions",
+    "name": "بطولات ودوريات كرة القدم"
+  },
+  {
+    "id": 5,
+    "category_id": 2,
+    "slug": "national-teams",
+    "name": "منتخبات كرة القدم"
+  },
+  {
+    "id": 6,
+    "category_id": 2,
+    "slug": "coaches",
+    "name": "مدربو كرة القدم"
+  },
+  {
+    "id": 7,
+    "category_id": 2,
+    "slug": "history-and-legends",
+    "name": "تاريخ كرة القدم وأساطيرها"
+  },
+  {
+    "id": 8,
+    "category_id": 2,
+    "slug": "rules",
+    "name": "قوانين كرة القدم"
+  },
+  {
+    "id": 9,
+    "category_id": 2,
+    "slug": "stadiums",
+    "name": "ملاعب كرة القدم"
+  },
+  {
+    "id": 10,
+    "category_id": 2,
+    "slug": "transfers",
+    "name": "انتقالات كرة القدم"
+  },
+  {
+    "id": 11,
+    "category_id": 2,
+    "slug": "records-and-statistics",
+    "name": "أرقام وإحصائيات كرة القدم"
+  },
+  {
+    "id": 12,
+    "category_id": 2,
+    "slug": "guess-player-career",
+    "name": "خمن اللاعب من مسيرته"
+  },
+  {
+    "id": 13,
+    "category_id": 2,
+    "slug": "guess-player-statistics",
+    "name": "خمن اللاعب من إحصائياته"
+  },
+  {
+    "id": 14,
+    "category_id": 2,
+    "slug": "guess-club-players",
+    "name": "خمن النادي من لاعبيه"
+  },
+  {
+    "id": 15,
+    "category_id": 2,
+    "slug": "guess-national-team-players",
+    "name": "خمن المنتخب من لاعبيه"
+  },
+  {
+    "id": 16,
+    "category_id": 2,
+    "slug": "guess-coach-career",
+    "name": "خمن المدرب من مسيرته"
+  },
+  {
+    "id": 17,
+    "category_id": 2,
+    "slug": "guess-team-achievements",
+    "name": "خمن الفريق من إنجازاته"
+  },
+  {
+    "id": 18,
+    "category_id": 3,
+    "slug": "basketball",
+    "name": "كرة السلة"
+  },
+  {
+    "id": 19,
+    "category_id": 3,
+    "slug": "tennis",
+    "name": "التنس"
+  },
+  {
+    "id": 20,
+    "category_id": 3,
+    "slug": "wrestling",
+    "name": "المصارعة الحرة ونجومها"
+  },
+  {
+    "id": 21,
+    "category_id": 3,
+    "slug": "formula-one",
+    "name": "سباقات الفورمولا 1"
+  },
+  {
+    "id": 22,
+    "category_id": 3,
+    "slug": "olympics",
+    "name": "الألعاب الأولمبية"
+  },
+  {
+    "id": 23,
+    "category_id": 3,
+    "slug": "esports",
+    "name": "الرياضات الإلكترونية"
+  },
+  {
+    "id": 24,
+    "category_id": 3,
+    "slug": "athletes",
+    "name": "رياضيون من مختلف الرياضات"
+  },
+  {
+    "id": 25,
+    "category_id": 4,
+    "slug": "mixed-movies",
+    "name": "أفلام عالمية متنوعة"
+  },
+  {
+    "id": 26,
+    "category_id": 4,
+    "slug": "arabic-movies",
+    "name": "أفلام عربية"
+  },
+  {
+    "id": 27,
+    "category_id": 4,
+    "slug": "disney-and-pixar",
+    "name": "أفلام ديزني وبيكسار"
+  },
+  {
+    "id": 28,
+    "category_id": 4,
+    "slug": "superhero-movies",
+    "name": "أفلام الأبطال الخارقين"
+  },
+  {
+    "id": 29,
+    "category_id": 4,
+    "slug": "oscar-winning-movies",
+    "name": "أفلام فائزة بالأوسكار"
+  },
+  {
+    "id": 30,
+    "category_id": 4,
+    "slug": "actors",
+    "name": "ممثلون وممثلات"
+  },
+  {
+    "id": 31,
+    "category_id": 4,
+    "slug": "directors",
+    "name": "مخرجون سينمائيون"
+  },
+  {
+    "id": 32,
+    "category_id": 4,
+    "slug": "international-tv-series",
+    "name": "مسلسلات عالمية متنوعة"
+  },
+  {
+    "id": 33,
+    "category_id": 4,
+    "slug": "netflix-originals",
+    "name": "مسلسلات نتفليكس الأصلية"
+  },
+  {
+    "id": 34,
+    "category_id": 4,
+    "slug": "characters",
+    "name": "شخصيات الأفلام والمسلسلات"
+  },
+  {
+    "id": 35,
+    "category_id": 4,
+    "slug": "guess-actor-roles",
+    "name": "خمن الممثل من أدواره"
+  },
+  {
+    "id": 36,
+    "category_id": 4,
+    "slug": "guess-movie-plot",
+    "name": "خمن الفيلم من القصة"
+  },
+  {
+    "id": 37,
+    "category_id": 4,
+    "slug": "guess-series-plot",
+    "name": "خمن المسلسل من القصة"
+  },
+  {
+    "id": 38,
+    "category_id": 4,
+    "slug": "guess-movie-quote",
+    "name": "خمن الفيلم من الاقتباس"
+  },
+  {
+    "id": 39,
+    "category_id": 4,
+    "slug": "guess-series-quote",
+    "name": "خمن المسلسل من الاقتباس"
+  },
+  {
+    "id": 40,
+    "category_id": 4,
+    "slug": "guess-movie-characters",
+    "name": "خمن الفيلم من الشخصيات"
+  },
+  {
+    "id": 41,
+    "category_id": 4,
+    "slug": "guess-series-characters",
+    "name": "خمن المسلسل من الشخصيات"
+  },
+  {
+    "id": 42,
+    "category_id": 5,
+    "slug": "harry-potter",
+    "name": "Harry Potter"
+  },
+  {
+    "id": 43,
+    "category_id": 5,
+    "slug": "the-lord-of-the-rings",
+    "name": "The Lord of the Rings"
+  },
+  {
+    "id": 44,
+    "category_id": 5,
+    "slug": "star-wars",
+    "name": "Star Wars"
+  },
+  {
+    "id": 45,
+    "category_id": 5,
+    "slug": "the-godfather",
+    "name": "The Godfather"
+  },
+  {
+    "id": 46,
+    "category_id": 5,
+    "slug": "the-dark-knight-trilogy",
+    "name": "The Dark Knight Trilogy"
+  },
+  {
+    "id": 47,
+    "category_id": 5,
+    "slug": "fast-furious",
+    "name": "Fast & Furious"
+  },
+  {
+    "id": 48,
+    "category_id": 5,
+    "slug": "mission-impossible",
+    "name": "Mission: Impossible"
+  },
+  {
+    "id": 49,
+    "category_id": 5,
+    "slug": "avatar",
+    "name": "Avatar"
+  },
+  {
+    "id": 50,
+    "category_id": 5,
+    "slug": "titanic",
+    "name": "Titanic"
+  },
+  {
+    "id": 51,
+    "category_id": 5,
+    "slug": "interstellar",
+    "name": "Interstellar"
+  },
+  {
+    "id": 52,
+    "category_id": 5,
+    "slug": "inception",
+    "name": "Inception"
+  },
+  {
+    "id": 53,
+    "category_id": 5,
+    "slug": "the-matrix",
+    "name": "The Matrix"
+  },
+  {
+    "id": 54,
+    "category_id": 5,
+    "slug": "john-wick",
+    "name": "John Wick"
+  },
+  {
+    "id": 55,
+    "category_id": 5,
+    "slug": "pirates-of-the-caribbean",
+    "name": "Pirates of the Caribbean"
+  },
+  {
+    "id": 56,
+    "category_id": 6,
+    "slug": "breaking-bad",
+    "name": "Breaking Bad"
+  },
+  {
+    "id": 57,
+    "category_id": 6,
+    "slug": "better-call-saul",
+    "name": "Better Call Saul"
+  },
+  {
+    "id": 58,
+    "category_id": 6,
+    "slug": "game-of-thrones",
+    "name": "Game of Thrones"
+  },
+  {
+    "id": 59,
+    "category_id": 6,
+    "slug": "house-of-the-dragon",
+    "name": "House of the Dragon"
+  },
+  {
+    "id": 60,
+    "category_id": 6,
+    "slug": "friends",
+    "name": "Friends"
+  },
+  {
+    "id": 61,
+    "category_id": 6,
+    "slug": "the-office",
+    "name": "The Office"
+  },
+  {
+    "id": 62,
+    "category_id": 6,
+    "slug": "prison-break",
+    "name": "Prison Break"
+  },
+  {
+    "id": 63,
+    "category_id": 6,
+    "slug": "lost",
+    "name": "Lost"
+  },
+  {
+    "id": 64,
+    "category_id": 6,
+    "slug": "the-walking-dead",
+    "name": "The Walking Dead"
+  },
+  {
+    "id": 65,
+    "category_id": 6,
+    "slug": "stranger-things",
+    "name": "Stranger Things"
+  },
+  {
+    "id": 66,
+    "category_id": 6,
+    "slug": "dark",
+    "name": "Dark"
+  },
+  {
+    "id": 67,
+    "category_id": 6,
+    "slug": "sherlock",
+    "name": "Sherlock"
+  },
+  {
+    "id": 68,
+    "category_id": 6,
+    "slug": "peaky-blinders",
+    "name": "Peaky Blinders"
+  },
+  {
+    "id": 69,
+    "category_id": 6,
+    "slug": "the-boys",
+    "name": "The Boys"
+  },
+  {
+    "id": 70,
+    "category_id": 6,
+    "slug": "squid-game",
+    "name": "Squid Game"
+  },
+  {
+    "id": 71,
+    "category_id": 6,
+    "slug": "the-last-of-us",
+    "name": "The Last of Us"
+  },
+  {
+    "id": 72,
+    "category_id": 6,
+    "slug": "money-heist",
+    "name": "Money Heist"
+  },
+  {
+    "id": 73,
+    "category_id": 6,
+    "slug": "vikings",
+    "name": "Vikings"
+  },
+  {
+    "id": 74,
+    "category_id": 6,
+    "slug": "the-sopranos",
+    "name": "The Sopranos"
+  },
+  {
+    "id": 75,
+    "category_id": 6,
+    "slug": "how-i-met-your-mother",
+    "name": "How I Met Your Mother"
+  },
+  {
+    "id": 76,
+    "category_id": 7,
+    "slug": "naruto",
+    "name": "Naruto"
+  },
+  {
+    "id": 77,
+    "category_id": 7,
+    "slug": "one-piece",
+    "name": "One Piece"
+  },
+  {
+    "id": 78,
+    "category_id": 7,
+    "slug": "dragon-ball",
+    "name": "Dragon Ball"
+  },
+  {
+    "id": 79,
+    "category_id": 7,
+    "slug": "attack-on-titan",
+    "name": "Attack on Titan"
+  },
+  {
+    "id": 80,
+    "category_id": 7,
+    "slug": "death-note",
+    "name": "Death Note"
+  },
+  {
+    "id": 81,
+    "category_id": 7,
+    "slug": "demon-slayer",
+    "name": "Demon Slayer"
+  },
+  {
+    "id": 82,
+    "category_id": 7,
+    "slug": "jujutsu-kaisen",
+    "name": "Jujutsu Kaisen"
+  },
+  {
+    "id": 83,
+    "category_id": 7,
+    "slug": "hunter-hunter",
+    "name": "Hunter × Hunter"
+  },
+  {
+    "id": 84,
+    "category_id": 7,
+    "slug": "bleach",
+    "name": "Bleach"
+  },
+  {
+    "id": 85,
+    "category_id": 7,
+    "slug": "fullmetal-alchemist",
+    "name": "Fullmetal Alchemist"
+  },
+  {
+    "id": 86,
+    "category_id": 7,
+    "slug": "tokyo-ghoul",
+    "name": "Tokyo Ghoul"
+  },
+  {
+    "id": 87,
+    "category_id": 7,
+    "slug": "detective-conan",
+    "name": "Detective Conan"
+  },
+  {
+    "id": 88,
+    "category_id": 7,
+    "slug": "pokemon",
+    "name": "Pokémon"
+  },
+  {
+    "id": 89,
+    "category_id": 7,
+    "slug": "yu-gi-oh",
+    "name": "Yu-Gi-Oh!"
+  },
+  {
+    "id": 90,
+    "category_id": 7,
+    "slug": "captain-tsubasa",
+    "name": "Captain Tsubasa"
+  },
+  {
+    "id": 91,
+    "category_id": 7,
+    "slug": "digimon",
+    "name": "Digimon"
+  },
+  {
+    "id": 92,
+    "category_id": 7,
+    "slug": "code-geass",
+    "name": "Code Geass"
+  },
+  {
+    "id": 93,
+    "category_id": 7,
+    "slug": "steins-gate",
+    "name": "Steins;Gate"
+  },
+  {
+    "id": 94,
+    "category_id": 7,
+    "slug": "studio-ghibli-movies",
+    "name": "أفلام استوديو غيبلي"
+  },
+  {
+    "id": 95,
+    "category_id": 7,
+    "slug": "mixed-anime-movies",
+    "name": "أفلام أنمي متنوعة"
+  },
+  {
+    "id": 96,
+    "category_id": 7,
+    "slug": "tom-and-jerry",
+    "name": "Tom and Jerry"
+  },
+  {
+    "id": 97,
+    "category_id": 7,
+    "slug": "spongebob-squarepants",
+    "name": "SpongeBob SquarePants"
+  },
+  {
+    "id": 98,
+    "category_id": 7,
+    "slug": "the-simpsons",
+    "name": "The Simpsons"
+  },
+  {
+    "id": 99,
+    "category_id": 7,
+    "slug": "looney-tunes",
+    "name": "Looney Tunes"
+  },
+  {
+    "id": 100,
+    "category_id": 7,
+    "slug": "avatar-the-last-airbender",
+    "name": "Avatar: The Last Airbender"
+  },
+  {
+    "id": 101,
+    "category_id": 7,
+    "slug": "rick-and-morty",
+    "name": "Rick and Morty"
+  },
+  {
+    "id": 102,
+    "category_id": 7,
+    "slug": "family-guy",
+    "name": "Family Guy"
+  },
+  {
+    "id": 103,
+    "category_id": 7,
+    "slug": "mixed-anime",
+    "name": "أنمي متنوع"
+  },
+  {
+    "id": 104,
+    "category_id": 7,
+    "slug": "mixed-cartoons",
+    "name": "كرتون متنوع"
+  },
+  {
+    "id": 105,
+    "category_id": 7,
+    "slug": "anime-characters",
+    "name": "شخصيات الأنمي"
+  },
+  {
+    "id": 106,
+    "category_id": 7,
+    "slug": "cartoon-characters",
+    "name": "شخصيات الكرتون"
+  },
+  {
+    "id": 107,
+    "category_id": 7,
+    "slug": "anime-and-cartoon-villains",
+    "name": "أشرار الأنمي والكرتون"
+  },
+  {
+    "id": 108,
+    "category_id": 7,
+    "slug": "anime-powers",
+    "name": "قوى وقدرات الأنمي"
+  },
+  {
+    "id": 109,
+    "category_id": 7,
+    "slug": "anime-battles",
+    "name": "معارك الأنمي"
+  },
+  {
+    "id": 110,
+    "category_id": 7,
+    "slug": "guess-anime-character-description",
+    "name": "خمن شخصية الأنمي من الوصف"
+  },
+  {
+    "id": 111,
+    "category_id": 7,
+    "slug": "guess-anime-character",
+    "name": "خمن الأنمي من الشخصية"
+  },
+  {
+    "id": 112,
+    "category_id": 8,
+    "slug": "mixed-games",
+    "name": "معلومات ألعاب فيديو متنوعة"
+  },
+  {
+    "id": 113,
+    "category_id": 8,
+    "slug": "villains",
+    "name": "أشرار ألعاب الفيديو"
+  },
+  {
+    "id": 114,
+    "category_id": 8,
+    "slug": "weapons-and-tools",
+    "name": "أسلحة وأدوات ألعاب الفيديو"
+  },
+  {
+    "id": 115,
+    "category_id": 8,
+    "slug": "guess-character-description",
+    "name": "خمن شخصية ألعاب الفيديو من الوصف"
+  },
+  {
+    "id": 116,
+    "category_id": 8,
+    "slug": "guess-game-description",
+    "name": "خمن لعبة الفيديو من الوصف"
+  },
+  {
+    "id": 117,
+    "category_id": 8,
+    "slug": "guess-game-characters",
+    "name": "خمن لعبة الفيديو من الشخصيات"
+  },
+  {
+    "id": 118,
+    "category_id": 9,
+    "slug": "historical-figures",
+    "name": "شخصيات تاريخية"
+  },
+  {
+    "id": 119,
+    "category_id": 9,
+    "slug": "world-changing-events",
+    "name": "أحداث غيرت العالم"
+  },
+  {
+    "id": 120,
+    "category_id": 9,
+    "slug": "ancient-civilizations",
+    "name": "حضارات قديمة"
+  },
+  {
+    "id": 121,
+    "category_id": 9,
+    "slug": "historical-mysteries-and-discoveries",
+    "name": "ألغاز واكتشافات تاريخية"
+  },
+  {
+    "id": 122,
+    "category_id": 10,
+    "slug": "countries-and-capitals",
+    "name": "دول وعواصم العالم"
+  },
+  {
+    "id": 123,
+    "category_id": 10,
+    "slug": "borders-and-neighbors",
+    "name": "حدود الدول وجيرانها"
+  },
+  {
+    "id": 124,
+    "category_id": 10,
+    "slug": "area-and-population",
+    "name": "مساحات الدول وسكانها"
+  },
+  {
+    "id": 125,
+    "category_id": 10,
+    "slug": "currencies",
+    "name": "عملات الدول"
+  },
+  {
+    "id": 126,
+    "category_id": 10,
+    "slug": "locations-and-continents",
+    "name": "مواقع الدول وقاراتها"
+  },
+  {
+    "id": 127,
+    "category_id": 10,
+    "slug": "guess-country-description",
+    "name": "خمن الدولة من وصفها"
+  },
+  {
+    "id": 128,
+    "category_id": 11,
+    "slug": "mixed-science",
+    "name": "معلومات علمية متنوعة"
+  },
+  {
+    "id": 129,
+    "category_id": 11,
+    "slug": "natural-phenomena",
+    "name": "ظواهر طبيعية"
+  },
+  {
+    "id": 130,
+    "category_id": 12,
+    "slug": "animal-world",
+    "name": "عالم الحيوان"
+  },
+  {
+    "id": 131,
+    "category_id": 13,
+    "slug": "solar-system",
+    "name": "المجموعة الشمسية"
+  },
+  {
+    "id": 132,
+    "category_id": 13,
+    "slug": "stars-and-galaxies",
+    "name": "النجوم والمجرات"
+  },
+  {
+    "id": 133,
+    "category_id": 13,
+    "slug": "space-exploration",
+    "name": "استكشاف الفضاء"
+  },
+  {
+    "id": 134,
+    "category_id": 14,
+    "slug": "english-language-songs",
+    "name": "أغاني باللغة الإنجليزية"
+  },
+  {
+    "id": 135,
+    "category_id": 14,
+    "slug": "international-singers-and-bands",
+    "name": "مطربون وفرق موسيقية عالمية"
+  },
+  {
+    "id": 136,
+    "category_id": 14,
+    "slug": "musical-instruments",
+    "name": "آلات موسيقية"
+  },
+  {
+    "id": 137,
+    "category_id": 14,
+    "slug": "paintings-and-artists",
+    "name": "لوحات ورسامون"
+  },
+  {
+    "id": 138,
+    "category_id": 15,
+    "slug": "guess-dish-ingredients",
+    "name": "خمن الطبق من مكوناته"
+  },
+  {
+    "id": 139,
+    "category_id": 15,
+    "slug": "international-dishes",
+    "name": "أطباق من حول العالم"
+  },
+  {
+    "id": 140,
+    "category_id": 16,
+    "slug": "logic-and-deduction",
+    "name": "ألغاز منطق واستنتاج"
+  },
+  {
+    "id": 141,
+    "category_id": 16,
+    "slug": "mystery-puzzles",
+    "name": "ألغاز التحقيق والغموض"
+  },
+  {
+    "id": 142,
+    "category_id": 16,
+    "slug": "wordplay",
+    "name": "ألغاز التلاعب بالكلمات"
+  },
+  {
+    "id": 143,
+    "category_id": 16,
+    "slug": "guess-word-definition",
+    "name": "خمن الكلمة من تعريفها"
+  },
+  {
+    "id": 144,
+    "category_id": 16,
+    "slug": "unscramble-letters",
+    "name": "رتب الحروف"
+  },
+  {
+    "id": 145,
+    "category_id": 16,
+    "slug": "complete-word",
+    "name": "أكمل الكلمة"
+  },
+  {
+    "id": 146,
+    "category_id": 16,
+    "slug": "complete-proverb",
+    "name": "أكمل المثل"
+  },
+  {
+    "id": 147,
+    "category_id": 16,
+    "slug": "what-am-i",
+    "name": "ألغاز ماذا أنا؟"
+  },
+  {
+    "id": 148,
+    "category_id": 16,
+    "slug": "common-link",
+    "name": "ما الرابط المشترك؟"
+  },
+  {
+    "id": 149,
+    "category_id": 16,
+    "slug": "odd-one-out",
+    "name": "اكتشف العنصر المختلف"
+  },
+  {
+    "id": 150,
+    "category_id": 16,
+    "slug": "general-true-or-false",
+    "name": "صح أم خطأ: معلومات متنوعة"
+  },
+  {
+    "id": 151,
+    "category_id": 16,
+    "slug": "complete-fact",
+    "name": "أكمل المعلومة"
+  },
+  {
+    "id": 152,
+    "category_id": 17,
+    "slug": "mixed-technology",
+    "name": "معلومات تكنولوجية متنوعة"
+  },
+  {
+    "id": 153,
+    "category_id": 17,
+    "slug": "technical-terms",
+    "name": "مصطلحات تقنية"
+  },
+  {
+    "id": 154,
+    "category_id": 17,
+    "slug": "computers",
+    "name": "أجهزة الكمبيوتر"
+  },
+  {
+    "id": 155,
+    "category_id": 17,
+    "slug": "content-creators",
+    "name": "صناع المحتوى والمؤثرون"
+  },
+  {
+    "id": 156,
+    "category_id": 18,
+    "slug": "landmark-history",
+    "name": "تاريخ المعالم والآثار"
+  },
+  {
+    "id": 157,
+    "category_id": 18,
+    "slug": "landmark-locations",
+    "name": "أين يقع هذا المعلم؟"
+  },
+  {
+    "id": 158,
+    "category_id": 19,
+    "slug": "organs-and-body-systems",
+    "name": "أعضاء وأجهزة الجسم"
+  },
+  {
+    "id": 159,
+    "category_id": 19,
+    "slug": "medical-terms-and-discoveries",
+    "name": "مصطلحات واكتشافات طبية"
+  },
+  {
+    "id": 160,
+    "category_id": 20,
+    "slug": "synonyms-and-antonyms",
+    "name": "المرادفات والأضداد"
+  },
+  {
+    "id": 161,
+    "category_id": 20,
+    "slug": "books-and-authors",
+    "name": "كتب وكتّاب"
+  },
+  {
+    "id": 162,
+    "category_id": 20,
+    "slug": "mixed-culture",
+    "name": "معلومات ثقافية متنوعة"
+  },
+  {
+    "id": 163,
+    "category_id": 21,
+    "slug": "world-mythology",
+    "name": "أساطير شعوب العالم"
+  },
+  {
+    "id": 164,
+    "category_id": 21,
+    "slug": "gods-and-mythical-creatures",
+    "name": "آلهة وكائنات أسطورية"
+  },
+  {
+    "id": 165,
+    "category_id": 21,
+    "slug": "mythology-in-movies-and-games",
+    "name": "الأساطير في الأفلام والألعاب"
+  },
+  {
+    "id": 166,
+    "category_id": 22,
+    "slug": "general-car-knowledge",
+    "name": "معلومات عامة عن السيارات"
+  },
+  {
+    "id": 167,
+    "category_id": 23,
+    "slug": "global-companies-and-brands",
+    "name": "شركات وعلامات تجارية عالمية"
+  },
+  {
+    "id": 168,
+    "category_id": 24,
+    "slug": "guess-movie",
+    "name": "خمن الفيلم من الإيموجي"
+  },
+  {
+    "id": 169,
+    "category_id": 24,
+    "slug": "guess-series",
+    "name": "خمن المسلسل من الإيموجي"
+  },
+  {
+    "id": 170,
+    "category_id": 24,
+    "slug": "guess-movie-character",
+    "name": "خمن شخصية فيلم من الإيموجي"
+  },
+  {
+    "id": 171,
+    "category_id": 24,
+    "slug": "guess-series-character",
+    "name": "خمن شخصية مسلسل من الإيموجي"
+  },
+  {
+    "id": 172,
+    "category_id": 24,
+    "slug": "guess-football-player",
+    "name": "خمن لاعب كرة القدم من الإيموجي"
+  },
+  {
+    "id": 173,
+    "category_id": 24,
+    "slug": "guess-football-club",
+    "name": "خمن نادي كرة القدم من الإيموجي"
+  },
+  {
+    "id": 174,
+    "category_id": 24,
+    "slug": "guess-national-team",
+    "name": "خمن منتخب كرة القدم من الإيموجي"
+  },
+  {
+    "id": 175,
+    "category_id": 24,
+    "slug": "guess-country",
+    "name": "خمن الدولة من الإيموجي"
+  },
+  {
+    "id": 176,
+    "category_id": 24,
+    "slug": "guess-city",
+    "name": "خمن المدينة من الإيموجي"
+  },
+  {
+    "id": 177,
+    "category_id": 24,
+    "slug": "guess-word",
+    "name": "خمن الكلمة من الإيموجي"
+  },
+  {
+    "id": 178,
+    "category_id": 24,
+    "slug": "guess-phrase",
+    "name": "خمن العبارة من الإيموجي"
+  },
+  {
+    "id": 179,
+    "category_id": 24,
+    "slug": "guess-video-game",
+    "name": "خمن لعبة الفيديو من الإيموجي"
+  },
+  {
+    "id": 180,
+    "category_id": 24,
+    "slug": "guess-anime",
+    "name": "خمن الأنمي من الإيموجي"
+  },
+  {
+    "id": 181,
+    "category_id": 24,
+    "slug": "guess-song",
+    "name": "خمن الأغنية من الإيموجي"
+  },
+  {
+    "id": 182,
+    "category_id": 24,
+    "slug": "guess-celebrity",
+    "name": "خمن الشخصية المشهورة من الإيموجي"
+  },
+  {
+    "id": 183,
+    "category_id": 24,
+    "slug": "guess-brand",
+    "name": "خمن العلامة التجارية من الإيموجي"
+  },
+  {
+    "id": 184,
+    "category_id": 25,
+    "slug": "guess-profession-description",
+    "name": "خمن المهنة من الوصف"
+  },
+  {
+    "id": 185,
+    "category_id": 25,
+    "slug": "tools-and-duties",
+    "name": "أدوات المهن ومهامها"
+  },
+  {
+    "id": 186,
+    "category_id": 26,
+    "slug": "inventions-and-inventors",
+    "name": "اختراعات ومخترعوها"
+  },
+  {
+    "id": 187,
+    "category_id": 27,
+    "slug": "verified-strange-facts",
+    "name": "حقائق غريبة موثقة"
+  },
+  {
+    "id": 188,
+    "category_id": 27,
+    "slug": "world-records",
+    "name": "أرقام قياسية عالمية"
+  },
+  {
+    "id": 189,
+    "category_id": 27,
+    "slug": "auction-records",
+    "name": "أغلى الأشياء المباعة في المزادات"
+  },
+  {
+    "id": 190,
+    "category_id": 27,
+    "slug": "fact-or-myth",
+    "name": "حقيقة أم خرافة؟"
+  },
+  {
+    "id": 191,
+    "category_id": 27,
+    "slug": "guess-record",
+    "name": "خمن الرقم القياسي"
+  }
+]
