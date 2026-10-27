@@ -2,8 +2,8 @@
   import CategoryBranch from './CategoryBranch.svelte';
   import CategoryLeaf from './CategoryLeaf.svelte';
   import type { CategoryNode } from '../types/catalog';
-  let {node,childrenByParent,selectedIds,limit,onToggle}: {
-    node:CategoryNode; childrenByParent:Map<string,CategoryNode[]>; selectedIds:string[];limit:number;onToggle:(id:string)=>void;
+  let {node,childrenByParent,selectedIds,remainingQuestionsById,limit,onToggle}: {
+    node:CategoryNode; childrenByParent:Map<string,CategoryNode[]>; selectedIds:string[];remainingQuestionsById:Map<string,number>;limit:number;onToggle:(id:string)=>void;
   }=$props();
   let expanded=$state(false);
   const children=$derived(childrenByParent.get(node.id) ?? []);
@@ -19,13 +19,13 @@
     <div id={`catalog-${node.id}`} hidden={!expanded}>
       {#if expanded}
         <div class="catalog-children" class:category-options={children.every(child=>child.kind!=='group')}>
-          {#each children as child (child.id)}<CategoryBranch node={child} {childrenByParent} {selectedIds} {limit} {onToggle}/>{/each}
+          {#each children as child (child.id)}<CategoryBranch node={child} {childrenByParent} {selectedIds} {remainingQuestionsById} {limit} {onToggle}/>{/each}
         </div>
       {/if}
     </div>
   </section>
 {:else}
-  <CategoryLeaf {node} {selectedIds} {limit} {onToggle}/>
+  <CategoryLeaf {node} {selectedIds} {remainingQuestionsById} {limit} {onToggle}/>
 {/if}
 
 <style>

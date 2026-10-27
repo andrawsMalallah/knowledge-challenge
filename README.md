@@ -69,7 +69,7 @@ An empty catalog shows an Arabic empty state. Creation stays disabled if the cat
 
 ### Board and scoring
 
-Each selected subcategory supplies six distinct questions: one **200**, **400** and **600** point question for each team. At each tier the two questions have the same allowed difficulty. The app selects them randomly without repeated internal question identities.
+Each selected subcategory supplies six distinct questions: one **200**, **400** and **600** point question for each team. At each tier the two questions have the same allowed difficulty. The app selects randomly from questions that have not previously been opened on this browser. A question is marked used only when it is displayed, so abandoned unseen tiles remain available. When one subcategory/point pool cannot provide a new matched pair, only that pool begins a new cycle.
 
 Teams alternate regular turns and choose their own available tiles. The host reveals the question, then the answer, selects **Team A**, **Team B** or **Neither**, and explicitly confirms the result. The answer can be revealed immediately; there is no five-second lock or expandable points preview.
 
@@ -113,7 +113,7 @@ Older imported/saved matches may retain their original sudden-death format; new 
 
 ## Saves, backups and offline use
 
-The browser stores one active game and optional interrupted preparation in IndexedDB, together with frozen media for older saved games. Setup preferences use localStorage. There is no cloud sync.
+The browser stores one active game, optional interrupted preparation, used-question history and frozen media for older saved games in IndexedDB. Setup preferences use localStorage. There is no cloud sync.
 
 A Web Lock permits only one writable tab. Other tabs show a read-only takeover screen; control transfers only after the previous owner saves a paused checkpoint. Browsers without Web Locks cannot edit a game. Use HTTPS in deployment; localhost is suitable for development.
 
@@ -121,9 +121,10 @@ Game transitions are saved before advancing. A failed save blocks further play a
 
 The navbar offers:
 
-- **Export:** downloads a ZIP containing the saved match and its frozen media. Export pauses a running timer.
-- **Import:** available from Home, validates the archive and asks before replacing the saved match.
+- **Export:** downloads a version-2 ZIP containing the saved match, used-question history and frozen media. Export pauses a running timer.
+- **Import:** available from Home, validates the archive and asks before replacing the saved match. Version-2 imports restore the source device's used-question history so play can continue on another device. Legacy version-1 backups remain importable and leave the destination history unchanged.
 - **Delete saved game:** a separate Home action with confirmation; removes the game, preparation and media while keeping setup preferences.
+- **Reset question history:** a separate confirmed Home action makes used questions eligible for future games again without changing the current saved match.
 
 Browser storage belongs to the site's exact origin. Localhost, preview URLs and a production/custom domain do not share saves. Clearing site data or browser eviction may delete progress. Keep an exported backup if the match matters.
 
@@ -222,7 +223,7 @@ Normal rows require an existing numeric `subcategory_id`; tiebreakers require `n
 
 The compiler checks primary/foreign keys, source content rules and normalized duplicate prompts within each pool. It generates the existing runtime catalog and per-subcategory payloads, splitting pools above 1,000 questions into numbered chunks with a manifest. The browser fetches only selected normal pools and the tiebreaker pool, not the complete database. All chunks of a selected pool are loaded to preserve balanced random selection; extremely large individual pools still need corresponding browser memory.
 
-The build reads the source tables in memory. Chunking bounds individual browser payloads; it does not make the source JSON a streaming database. Saved session version 1 and backup formats remain unchanged, including frozen legacy questions and media.
+The build reads the source tables in memory. Chunking bounds individual browser payloads; it does not make the source JSON a streaming database. Saved session version 1 remains unchanged. Backup version 2 adds used-question history while retaining version-1 import compatibility and frozen legacy question/media support.
 
 ## Question rules
 

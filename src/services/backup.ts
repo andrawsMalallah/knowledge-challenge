@@ -2,6 +2,8 @@ import type { Session } from '../types/game';
 import { readMedia } from './storage';
 import { validateSession } from './sessionValidation';
 import { hasImageSignature, validateImageBlob, IMAGE_MIMES, MAX_GAME_IMAGE_BYTES, imageExtension } from './imageValidation';
+import type { QuestionHistory } from './questionHistory.mjs';
+import { parseQuestionHistory } from './questionHistory.mjs';
 
 /** Portable backup v1: uncompressed ZIP, no external dependencies or executable payloads. */
 const encoder = new TextEncoder();
@@ -12,7 +14,7 @@ const MAX_JSON = 2 * 1024 * 1024;
 const MAX_ENTRIES = 160;
 const ACCEPTED_TYPES = new Set<string>(IMAGE_MIMES);
 interface Entry { name: string; data: Uint8Array }
-interface Manifest { format: 'arabic-trivia-backup'; version: 1; images: { source: string; file: string; mime: string }[] }
+interface Manifest { format: 'arabic-trivia-backup'; version: 1 | 2; images: { source: string; file: string; mime: string }[] }
 
 const crcTable = Array.from({length:256}, (_,n) => {
   for (let k=0;k<8;k++) n = n & 1 ? 0xedb88320 ^ (n>>>1) : n>>>1;
@@ -58,10 +60,11 @@ function zip(entries:Entry[]):Blob {
   if (result.size>MAX_ARCHIVE) throw new Error('النسخة الاحتياطية كبيرة جدًا');
   return result;
 }
-export async function exportBackup(session:Session):Promise<Blob> {
+export async function exportBackup(session:Session,history:QuestionHistory):Promise<Blob> {
   const paths=imagePaths(session);
-  if(paths.length>MAX_ENTRIES-2) throw new Error('عدد الصور يتجاوز الحد المسموح');
-  const manifest:Manifest={format:'arabic-trivia-backup',version:1,images:[]};
+  if(paths.length>MAX_ENTRIES-3) throw new Error('عدد الصور يتجاوز الحد المسموح');
+  const validatedHistory=parseQuestionHistory(history);
+  const manifest:Manifest={format:'arabic-trivia-backup',version:2,images:[]};
   const entries:Entry[]=[];
   for(const [index,path] of paths.entries()) {
     const blob=await readMedia(path);
@@ -75,7 +78,9 @@ export async function exportBackup(session:Session):Promise<Blob> {
     entries.push({name:file,data:bytes});
   }
   const sessionBytes=encoder.encode(JSON.stringify(session));
-  if(sessionBytes.length>MAX_JSON) throw new Error('بيانات اللعبة كبيرة جدًا');
+  const historyBytes=encoder.encode(JSON.stringify(validatedHistory));
+  if(sessionBytes.length>MAX_JSON || historyBytes.length>MAX_JSON) throw new Error('بيانات اللعبة كبيرة جدًا');
+  entries.unshift({name:'history.json',data:historyBytes});
   entries.unshift({name:'session.json',data:sessionBytes});
   entries.unshift({name:'manifest.json',data:encoder.encode(JSON.stringify(manifest))});
   return zip(entries);
@@ -96,7 +101,7 @@ function unzipStored(buffer:ArrayBuffer):Map<string,Uint8Array> {
     const length=dv.getUint16(p+28,true),extra=dv.getUint16(p+30,true),comment=dv.getUint16(p+32,true),local=dv.getUint32(p+42,true);
     if(method!==0 || (flags&1) || !(flags&0x800) || packed!==size || size>MAX_IMAGE || length===0 || p+46+length+extra+comment>end) throw new Error('صيغة ZIP غير مدعومة');
     const name=decoder.decode(data.subarray(p+46,p+46+length));
-    if(!/^(manifest\.json|session\.json|media\/[0-9]{3}\.(png|jpg|webp|avif|gif|svg))$/.test(name) || result.has(name)) throw new Error('ملفات ZIP غير متوقعة');
+    if(!/^(manifest\.json|session\.json|history\.json|media\/[0-9]{3}\.(png|jpg|webp|avif|gif|svg))$/.test(name) || result.has(name)) throw new Error('ملفات ZIP غير متوقعة');
     if(local+30>dirOffset || dv.getUint32(local,true)!==0x04034b50 || dv.getUint16(local+8,true)!==0) throw new Error('ترويسة ZIP غير متطابقة');
     const localNameLength=dv.getUint16(local+26,true),localExtra=dv.getUint16(local+28,true);
     if(local+30+localNameLength+localExtra+size>dirOffset || decoder.decode(data.subarray(local+30,local+30+localNameLength))!==name) throw new Error('ملف ZIP تالف');
@@ -107,17 +112,22 @@ function unzipStored(buffer:ArrayBuffer):Map<string,Uint8Array> {
   if(p!==end) throw new Error('فهرس ZIP تالف');
   return result;
 }
-export interface ImportedBackup { session:Session; media:{source:string; blob:Blob}[] }
+export interface ImportedBackup { session:Session; history?:QuestionHistory; media:{source:string; blob:Blob}[] }
 export function parseBackup(buffer:ArrayBuffer):ImportedBackup {
   const files=unzipStored(buffer);
   const manifestBytes=files.get('manifest.json'),sessionBytes=files.get('session.json');
   if(!manifestBytes || !sessionBytes || manifestBytes.length>65536 || sessionBytes.length>MAX_JSON) throw new Error('ملفات النسخة الاحتياطية ناقصة');
   const manifest:Manifest=JSON.parse(decoder.decode(manifestBytes));
   const session:unknown=JSON.parse(decoder.decode(sessionBytes));
-  if(manifest?.format!=='arabic-trivia-backup'||manifest.version!==1||!Array.isArray(manifest.images)) throw new Error('نسخة احتياطية غير مدعومة');
+  if(manifest?.format!=='arabic-trivia-backup'||![1,2].includes(manifest.version)||!Array.isArray(manifest.images)) throw new Error('نسخة احتياطية غير مدعومة');
   validateSession(session);
+  const historyBytes=files.get('history.json');
+  if ((manifest.version===2&&(!historyBytes||historyBytes.length>MAX_JSON)) || (manifest.version===1&&historyBytes)) throw new Error('سجل الأسئلة مفقود أو غير صالح');
+  const history=manifest.version===2
+    ? parseQuestionHistory(JSON.parse(decoder.decode(historyBytes!)))
+    : undefined;
   const paths=imagePaths(session);
-  if(manifest.images.length!==paths.length || files.size!==manifest.images.length+2) throw new Error('صور اللعبة غير مكتملة');
+  if(manifest.images.length!==paths.length || files.size!==manifest.images.length+(manifest.version===2?3:2) || (manifest.version===1&&historyBytes)) throw new Error('صور اللعبة غير مكتملة');
   const media:{source:string;blob:Blob}[]=[]; const seen=new Set<string>();
   for(const item of manifest.images){
     if(!item || typeof item.source!=='string'||!paths.includes(item.source)||seen.has(item.source)||typeof item.file!=='string'||!ACCEPTED_TYPES.has(item.mime)) throw new Error('مرجع صورة غير صالح');
@@ -125,5 +135,5 @@ export function parseBackup(buffer:ArrayBuffer):ImportedBackup {
     if(!bytes||!bytes.length||bytes.length>MAX_IMAGE||!hasImageSignature(bytes,item.mime)||!item.file.endsWith('.'+imageExtension(item.mime))) throw new Error('صورة مفقودة أو غير صالحة');
     seen.add(item.source);media.push({source:item.source,blob:new Blob([new Uint8Array(bytes).buffer],{type:item.mime})});
   }
-  return {session,media};
+  return {session,history,media};
 }

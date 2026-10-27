@@ -4,7 +4,7 @@ export const NORMAL_ID = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*\/[a-z][a-z0-9]*(?:-[a-z
 const isObject = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function arabicText(value) {
   return typeof value === 'string' && value.trim().length > 0 && /[\p{L}\p{N}]/u.test(value) &&
-    [...value].every(character => !/\p{L}/u.test(character) || /\p{Script=Arabic}/u.test(character));
+    [...value].every(character => !/\p{L}/u.test(character) || /\p{Script=Arabic}/u.test(character) || character === '\u0640');
 }
 // Catalog titles may retain original Latin names; question/answer language stays Arabic.
 function categoryName(value) {
@@ -20,9 +20,9 @@ export function parseCategoryTree(value) {
     ids.add(category.id);
     const subIds = new Set();
     return {id:category.id,name:category.name,subcategories:category.subcategories.map(subcategory => {
-      if (!isObject(subcategory) || !exactKeys(subcategory,['id','name']) || typeof subcategory.id !== 'string' || !SLUG.test(subcategory.id) || subIds.has(subcategory.id) || !categoryName(subcategory.name)) throw Error('بيانات التصنيف الفرعي غير صالحة');
+      if (!isObject(subcategory) || !exactKeys(subcategory,['id','name','questionCount']) || typeof subcategory.id !== 'string' || !SLUG.test(subcategory.id) || subIds.has(subcategory.id) || !categoryName(subcategory.name) || ('questionCount' in subcategory && (!Number.isSafeInteger(subcategory.questionCount) || subcategory.questionCount < 0))) throw Error('بيانات التصنيف الفرعي غير صالحة');
       subIds.add(subcategory.id);
-      return {id:subcategory.id,name:subcategory.name};
+      return {id:subcategory.id,name:subcategory.name,questionCount:'questionCount' in subcategory?subcategory.questionCount:undefined};
     })};
   });
 }

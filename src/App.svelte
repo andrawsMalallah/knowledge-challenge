@@ -11,13 +11,14 @@
   import QuestionTeams from './components/QuestionTeams.svelte';
   import ShootoutScoreboard from './components/ShootoutScoreboard.svelte';
   import ConfirmationModal from './components/ConfirmationModal.svelte';
+  import QuestionHistoryModal from './components/QuestionHistoryModal.svelte';
   import type { ConfirmationHandle, ConfirmationOptions } from './types/confirmation';
   import CategoryPicker from './components/CategoryPicker.svelte';
   import type { CategoryCatalog } from './types/catalog';
   import { playableCategories } from './services/categoryCatalog';
   import { acquireGameControl, requestGameControl, releaseGameControl, hasGameControl, observeGameControl, onTransferRequest } from './services/tabControl';
   import QuestionMedia from './components/QuestionMedia.svelte';
-  import { assignBalanced, selectTiebreakers } from './engine/assignment';
+  import { assignBalanced, assignBalancedAvoiding, selectTiebreakersAvoiding } from './engine/assignment';
   import { opposite } from './engine/rules';
   import { available, togglePower, selectOwnTile, cancelSelection, POWER_LABELS } from './engine/lifelines';
   import type { Power } from './types/game';
@@ -26,19 +27,22 @@
   import { tickTimer } from './engine/timer';
   import { withTimerCheckpoint, pauseQuestionTimer, restorePausedSession } from './engine/timerSession';
   import { createTieState, tieStarter, tieQuestion, beginTie, openTieQuestion, returnToTiePreparation, revealTieAnswer, confirmTieAnswer, resumeEarlyDraw, beginTieCorrection, setTieCorrection, cancelTieCorrection, confirmTieCorrection } from './engine/tiebreaker';
-  import { readSession, saveSession, installImportedSession, pruneUnusedMedia, readPreparation, savePreparation, clearPreparation, deleteSavedGames } from './services/storage';
+  import { readSession, saveSession, saveSessionAndMarkQuestionUsed, installImportedSession, pruneUnusedMedia, readPreparation, savePreparationWithQuestionHistory, clearPreparation, deleteSavedGames, readQuestionHistory, clearQuestionHistory } from './services/storage';
   import { exportBackup, parseBackup } from './services/backup';
   import { prepareGameAssets } from './services/preparation';
   import { validateImageBlob } from './services/imageValidation';
   import { loadSetupPreferences, saveSetupPreferences } from './services/settings';
   import type { Category, Outcome, Session, TeamId } from './types/game';
   import { loadCategoryCatalog, loadSelectedQuestions, loadTiebreakerQuestions } from './services/questionBank';
+  import { resetQuestionPools } from './services/questionHistory.mjs';
   let categories: Category[] = $state.raw([]);
   let catalog = $state.raw<CategoryCatalog>();
   let selectedCategoryIds: string[] = $state([]);
   let categoryCount: 4 | 6 | 8 = $state(6);
   let categoriesLoading = $state(false);
   let tiebreakerCount = $state(0);
+  let usedQuestionCount = $state(0);
+  let usedQuestionIds: string[] = $state.raw([]);
   let draftStarter = $state<TeamId>('A');
   const draftTurn = $derived(selectedCategoryIds.length % 2 === 0 ? draftStarter : opposite(draftStarter));
   async function newSetup() {
@@ -62,9 +66,11 @@
   async function refreshCategories() {
     categoriesLoading = true;
     try {
-      const [loadedCatalog,ties] = await Promise.all([loadCategoryCatalog(),loadTiebreakerQuestions()]);
+      const [loadedCatalog,ties,history] = await Promise.all([loadCategoryCatalog(),loadTiebreakerQuestions(),readQuestionHistory()]);
       catalog = loadedCatalog;
       tiebreakerCount = ties.length;
+      usedQuestionCount = history.used.length;
+      usedQuestionIds = history.used;
       categories = playableCategories(catalog);
       selectedCategoryIds = selectedCategoryIds.filter(id => categories.some(c => c.id === id)).slice(0, categoryCount);
     } catch (e) { error = e instanceof Error ? e.message : 'تعذر تحميل التصنيفات'; }
@@ -87,6 +93,7 @@
   let aName=$state('فريق التحدي'); let bName=$state('فريق المعرفة');
   let timerEnabled=$state(true); let tieLimit=$state(5);
   let confirmationModal=$state<ConfirmationHandle>();
+  let questionHistoryModal=$state<{show:()=>Promise<void>;dismiss:()=>void}>();
   let confirmationPending=$state(false);
   let confirmationFinished:Promise<void>=Promise.resolve();
   async function requestConfirmation(options:ConfirmationOptions,onAccept?:()=>void):Promise<boolean> {
@@ -218,10 +225,19 @@
     } catch { error='تعذر حذف اللعبة المحفوظة. أعد المحاولة.'; }
     finally { busy=false; }
   }
+  async function resetUsedQuestionHistory() {
+    if(screen!=='home' || busy || !await requestConfirmation({title:'إعادة تعيين سجل الأسئلة',message:'ستصبح الأسئلة المستخدمة متاحة من جديد في الألعاب القادمة. لا تتأثر اللعبة المحفوظة الحالية.',confirmLabel:'إعادة التعيين'}))return;
+    busy=true;error='';
+    try{await clearQuestionHistory();usedQuestionCount=0;usedQuestionIds=[];}
+    catch{error='تعذر إعادة تعيين سجل الأسئلة. أعد المحاولة.';}
+    finally{busy=false;}
+  }
   $effect(() => {
     if(screen!=='home' || controlState!=='owner')return;
-    void readSession().then(saved=>{
+    void Promise.all([readSession(),readQuestionHistory()]).then(([saved,history])=>{
       savedSummary=saved?`${saved.teams.A.name} × ${saved.teams.B.name} · ${western(saved.tiles.filter(tile=>tile.completed).length)} / ${western(saved.tiles.length)}`:'';
+      usedQuestionCount=history.used.length;
+      usedQuestionIds=history.used;
     }).catch(()=>{error='تعذر قراءة اللعبة المحفوظة؛ لن يتم حذفها. استخدم إعادة المحاولة أو استورد نسخة احتياطية.';});
   });
   function western(value:number):string { return new Intl.NumberFormat('en-US').format(value); }
@@ -261,6 +277,7 @@
     return () => { unsubscribe(); unregister(); releaseGameControl(); };
   });
   async function persist(next:Session) { busy=true; error=''; try { await saveSession(next); game=next; pendingSave=null; return true; } catch { pendingSave=pauseQuestionTimer(next); error='تعذر حفظ التقدم. الرجاء إعادة المحاولة قبل المتابعة.'; return false; } finally {busy=false;} }
+  async function persistUsed(next:Session,questionId:string) { busy=true; error=''; try { const history=await saveSessionAndMarkQuestionUsed(next,questionId);usedQuestionCount=history.used.length;usedQuestionIds=history.used;game=next;pendingSave=null;return true; } catch { pendingSave=pauseQuestionTimer(next);error='تعذر حفظ السؤال في سجل الاستخدام. أعد المحاولة قبل المتابعة.';return false; } finally {busy=false;} }
   async function retrySave() {
     if (!pendingSave) return;
     if (await persist(pendingSave)) screen=game!.phase as typeof screen;
@@ -278,7 +295,8 @@
         saved = pausedGame;
       } else saved = await readSession();
       if (!saved) throw new Error('لا توجد لعبة محفوظة للتصدير');
-      const blob = await exportBackup(saved);
+      const history=await readQuestionHistory();
+      const blob = await exportBackup(saved,history);
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url; link.download = 'trivia-game-backup.zip'; link.click();
@@ -302,11 +320,12 @@
       const newLabel = `${imported.session.teams.A.name} × ${imported.session.teams.B.name}`;
       if (!await requestConfirmation({title:'استيراد نسخة احتياطية',message:`اللعبة الحالية: ${oldLabel}\nالنسخة المستوردة: ${newLabel}\nهل تريد استبدال اللعبة الحالية؟`,confirmLabel:'استيراد واستبدال'})) return;
       const restored = restorePausedSession(imported.session);
-      await installImportedSession(restored, imported.media);
+      await installImportedSession(restored, imported.media, imported.history);
       // Cleanup happens only after replacement is durable. A cleanup error
       // must never turn a successful import into an apparent failed import.
       void pruneUnusedMedia().catch(() => undefined);
       game = restored;
+      const history=await readQuestionHistory();usedQuestionCount=history.used.length;usedQuestionIds=history.used;
       screen = 'home';
     } catch (cause) { error = cause instanceof Error ? cause.message : 'تعذر استيراد النسخة الاحتياطية'; }
     finally { busy = false; input.value = ''; }
@@ -327,13 +346,17 @@
     try {
       busy = true;
       preparationMessage = 'تحميل أسئلة التصنيفات والتحقق من صعوبتها';
-      const [questionBank, pool] = await Promise.all([loadSelectedQuestions(chosen), loadTiebreakerQuestions()]);
-      tiles = assignBalanced(chosen, questionBank);
+      const [questionBank, pool, history] = await Promise.all([loadSelectedQuestions(chosen), loadTiebreakerQuestions(),readQuestionHistory()]);
+      const usedIds=new Set(history.used);
+      const normalSelection=assignBalancedAvoiding(chosen,questionBank,usedIds);
+      tiles = normalSelection.tiles;
       if (pool.length < tieLimit * 2) throw new Error('أسئلة الجولة الفاصلة غير كافية');
-      const selectedTies = selectTiebreakers(pool, tieLimit * 2);
+      const tieSelection=selectTiebreakersAvoiding(pool,tieLimit*2,usedIds);
+      const selectedTies=tieSelection.questions;
+      const nextHistory=resetQuestionPools(history,[...normalSelection.resetIds,...tieSelection.resetIds]);
       const first = draftStarter;
       const next:Session={version:1,teams:{ A:{id:'A',name:aName.trim()||'فريق التحدي',color:aColor,score:0,used:[]},B:{id:'B',name:bName.trim()||'فريق المعرفة',color:bColor,score:0,used:[]} },categories:chosen,tiles,turn:first,timerEnabled,tieLimit,phase:'board',tie:createTieState(selectedTies,tieLimit,first)};
-      await savePreparation(next); preparationAvailable=true;
+      const savedHistory=await savePreparationWithQuestionHistory(next,nextHistory);usedQuestionCount=savedHistory.used.length;usedQuestionIds=savedHistory.used;preparationAvailable=true;
       await completePreparation(next);
     } catch (e) { error=e instanceof DOMException && e.name==='AbortError'?'':e instanceof Error?e.message:'تعذر تجهيز اللعبة'; }
     finally {busy=false;preparationMessage='';}
@@ -355,7 +378,7 @@
   }
   async function openQuestion() {
     if (!game || busy) return;
-    try { if (await persist(openSelectedQuestion(game))) screen='question'; }
+    try { const next=openSelectedQuestion(game);if (await persistUsed(next,active!.question.id)) screen='question'; }
     catch { error='تعذر فتح السؤال.'; }
   }
   async function updateTimer(pause: boolean) {
@@ -454,6 +477,11 @@
     try { const next=change(game); if(await persist(next)) screen=next.phase as typeof screen; }
     catch(e) {error=e instanceof Error?e.message:'تعذر تحديث الجولة الفاصلة';}
   }
+  async function openNextTieQuestion(){
+    if(!game?.tie||busy)return;
+    try{const question=tieQuestion(game.tie);if(!question)throw new Error('السؤال الفاصل غير متاح');const next=openTieQuestion(game);if(await persistUsed(next,question.id))screen=next.phase as typeof screen;}
+    catch(e){error=e instanceof Error?e.message:'تعذر فتح السؤال الفاصل';}
+  }
   async function tieExit() { if(await requestConfirmation({title:'العودة للاستعداد',message:'العودة إلى استعداد الجولة الفاصلة مع حفظ الوقت؟',confirmLabel:'العودة للاستعداد'})) await tieAction(returnToTiePreparation); }
   async function tieEnd() { await endGameEarly(); }
   async function tieUndo() { if(await requestConfirmation({title:'تصحيح السؤال الفاصل',message:'التراجع عن آخر نتيجة فاصلة؟',confirmLabel:'فتح التصحيح'})) await tieAction(beginTieCorrection); }
@@ -510,6 +538,7 @@
 </script>
 <svelte:head><title>تحدي المعرفة</title></svelte:head>
 <ConfirmationModal bind:this={confirmationModal}/>
+<QuestionHistoryModal bind:this={questionHistoryModal} count={usedQuestionCount} onReset={resetUsedQuestionHistory} disabled={busy || confirmationPending}/>
 {#if controlState !== 'owner'}
   <div class="control-overlay" role="alertdialog" tabindex="-1" aria-modal="true" aria-label="التحكم باللعبة">
     <div class="card control-notice">
@@ -526,6 +555,7 @@
   <header class="app-navbar">
     <strong class="brand">✦ تحدي المعرفة</strong>
     <nav class="navbar-actions" aria-label="أدوات التطبيق">
+      <BackupIconButton icon="history" label="سجل الأسئلة المستخدمة" hint={screen==='home'?'سجل الأسئلة المستخدمة':'سجل الأسئلة المستخدمة — من الرئيسية فقط'} onclick={()=>void questionHistoryModal?.show()} disabled={screen!=='home' || busy || !!pendingSave || confirmationPending}/>
       <BackupIconButton icon="import" label="استيراد نسخة احتياطية" hint={screen==='home'?'استيراد نسخة احتياطية':'استيراد نسخة احتياطية — من الرئيسية فقط'} onclick={()=>importInput?.click()} disabled={screen!=='home' || busy || !!pendingSave || confirmationPending}/>
       <BackupIconButton icon="export" label="تصدير نسخة احتياطية" onclick={downloadBackup} disabled={busy || !!pendingSave || confirmationPending}/>
     </nav>
@@ -543,7 +573,7 @@
   {:else if screen==='setup'}
     <section class="card"><h1>إعداد اللعبة</h1><div class="form-grid"><label>اسم الفريق الأول<input bind:value={aName} maxlength="35"/></label><label>اسم الفريق الثاني<input bind:value={bName} maxlength="35"/></label></div><NumberRadioSetting title="حد الجولة الفاصلة" description="اختر عدد المحاولات لكل فريق في الجولة الفاصلة. إجابة صحيحة تساوي نقطة فاصلة، والتساوي بعد جميع المحاولات يعني التعادل." options={[1,2,3,4,5]} bind:value={tieLimit}/>
       <PreferenceToggle title="مؤقت الإجابة" description="دقيقة واحدة (60 ثانية) للإجابة، ثم 15 ثانية لفرصة الفريق الآخر. عند الإيقاف تُلعب الأسئلة دون مؤقت." bind:checked={timerEnabled}/>
-      <div class="team-color-setup"><fieldset><legend>لون الفريق الأول</legend><div class="color-swatches">{#each palette as color}<button type="button" class:color-selected={aColor===color} class:light-team={color==='#FACC15'} style:--swatch={color} disabled={bColor===color} onclick={()=>aColor=color} aria-label={`لون الفريق الأول ${color}`} aria-pressed={aColor===color}></button>{/each}</div></fieldset><fieldset><legend>لون الفريق الثاني</legend><div class="color-swatches">{#each palette as color}<button type="button" class:color-selected={bColor===color} class:light-team={color==='#FACC15'} style:--swatch={color} disabled={aColor===color} onclick={()=>bColor=color} aria-label={`لون الفريق الثاني ${color}`} aria-pressed={bColor===color}></button>{/each}</div></fieldset></div><p class="muted">دور اختيار التصنيف: {draftTurn === 'A' ? aName : bName}</p><p class="muted">اختر تصنيفاتكم المفضلة، ثم ابدأوا التحدي.</p><div class="category-picker"><h2>عدد التصنيفات</h2><div class="choices category-count-options">{#each [4,6,8] as count}<button class:selected={categoryCount===count} aria-pressed={categoryCount===count} onclick={()=>setCategoryCount(count as 4|6|8)}>{western(count)}</button>{/each}</div><h2>اختر {western(categoryCount)} تصنيفات ({western(selectedCategoryIds.length)} محددة)</h2>{#if categoriesLoading}<p>تحميل التصنيفات…</p>{:else}{#if catalog}<CategoryPicker {catalog} selectedIds={selectedCategoryIds} limit={categoryCount} onToggle={selectCategory}/>{/if}{/if}</div>{#if !categoriesLoading && tiebreakerCount < tieLimit * 2}<p class="muted" role="status">لا يمكن إنشاء لعبة بعد: يلزم {western(tieLimit * 2)} سؤالًا فاصلًا على الأقل لعدد المحاولات المحدد.</p>{/if}<div class="actions"><ActionButton label="إنشاء اللعبة" onclick={start} disabled={busy || categoriesLoading || selectedCategoryIds.length!==categoryCount || tiebreakerCount < tieLimit * 2}/><ActionButton label="الرئيسية" onclick={goHome} secondary/></div></section>
+      <div class="team-color-setup"><fieldset><legend>لون الفريق الأول</legend><div class="color-swatches">{#each palette as color}<button type="button" class:color-selected={aColor===color} class:light-team={color==='#FACC15'} style:--swatch={color} disabled={bColor===color} onclick={()=>aColor=color} aria-label={`لون الفريق الأول ${color}`} aria-pressed={aColor===color}></button>{/each}</div></fieldset><fieldset><legend>لون الفريق الثاني</legend><div class="color-swatches">{#each palette as color}<button type="button" class:color-selected={bColor===color} class:light-team={color==='#FACC15'} style:--swatch={color} disabled={aColor===color} onclick={()=>bColor=color} aria-label={`لون الفريق الثاني ${color}`} aria-pressed={bColor===color}></button>{/each}</div></fieldset></div><p class="muted">دور اختيار التصنيف: {draftTurn === 'A' ? aName : bName}</p><p class="muted">اختر تصنيفاتكم المفضلة، ثم ابدأوا التحدي.</p><div class="category-picker"><h2>عدد التصنيفات</h2><div class="choices category-count-options">{#each [4,6,8] as count}<button class:selected={categoryCount===count} aria-pressed={categoryCount===count} onclick={()=>setCategoryCount(count as 4|6|8)}>{western(count)}</button>{/each}</div><h2>اختر {western(categoryCount)} تصنيفات ({western(selectedCategoryIds.length)} محددة)</h2>{#if categoriesLoading}<p>تحميل التصنيفات…</p>{:else}{#if catalog}<CategoryPicker {catalog} selectedIds={selectedCategoryIds} {usedQuestionIds} {tiebreakerCount} limit={categoryCount} onToggle={selectCategory}/>{/if}{/if}</div>{#if !categoriesLoading && tiebreakerCount < tieLimit * 2}<p class="muted" role="status">لا يمكن إنشاء لعبة بعد: يلزم {western(tieLimit * 2)} سؤالًا فاصلًا على الأقل لعدد المحاولات المحدد.</p>{/if}<div class="actions"><ActionButton label="إنشاء اللعبة" onclick={start} disabled={busy || categoriesLoading || selectedCategoryIds.length!==categoryCount || tiebreakerCount < tieLimit * 2}/><ActionButton label="الرئيسية" onclick={goHome} secondary/></div></section>
   {:else if screen==='board' && game}
     {#if game.activeId}<div class="pending-question"><ActionButton label="متابعة السؤال" onclick={()=>screen=game!.phase as typeof screen}/></div>{/if}
     <div class="scoreboard"><div style:--team-color={game.teams.A.color} class="team"><span>{game.teams.A.name}</span><strong>{western(game.teams.A.score)}</strong></div><div style:--team-color={game.teams.B.color} class="team"><span>{game.teams.B.name}</span><strong>{western(game.teams.B.score)}</strong></div></div>
@@ -569,7 +599,7 @@
   {:else if screen==='tie-intro' && game?.tie}
     <section class="card question"><span class="eyebrow">الجولة الفاصلة</span><h1>تعادل الفريقان</h1><p>{#if game.tie.format==='shootout'}لكل فريق {western(game.tieLimit)} محاولات بالتناوب. يجيب صاحب المحاولة فقط خلال 60 ثانية عند تفعيل المؤقت. تحسم الجولة عندما يستحيل اللحاق بالمتصدر، والتساوي بعد جميع المحاولات يعني التعادل. يتم اختيار الفريق الأول عشوائيًا عند البدء.{:else}أول إجابة صحيحة تحسم الجولة المحفوظة القديمة.{/if} لا تتغير النقاط الأصلية.</p><div class="actions"><ActionButton label="بدء الجولة الفاصلة" onclick={()=>tieAction(beginTie)}/><ActionButton label="إنهاء بالتعادل" secondary onclick={tieEnd}/>{#if game.lastRecord}<ActionButton label="تصحيح آخر سؤال عادي" secondary onclick={undo}/>{/if}</div></section>
   {:else if screen==='tie-ready' && game?.tie}
-    <section class="card question"><span class="eyebrow">الجولة الفاصلة</span><h1>السؤال {western(game.tie.confirmed.length+1)} من {western(game.tie.questions.length)}</h1><ShootoutScoreboard {game}/><p>الفريق الذي يبدأ: <strong style:color={game.teams[tieStarter(game.tie)].color}>{game.teams[tieStarter(game.tie)].name}</strong></p><div class="actions"><ActionButton label={game.tie.pending?'متابعة السؤال':'السؤال التالي'} onclick={()=>tieAction(openTieQuestion)}/>{#if !game.tie.pending && game.tie.correctionEligible !== false && game.tie.confirmed.length>0}<ActionButton label="تصحيح آخر سؤال فاصل" secondary onclick={tieUndo}/>{/if}<ActionButton label="إنهاء بالتعادل" secondary onclick={tieEnd}/><ActionButton label="الرئيسية" secondary onclick={goHome}/>{#if game.lastRecord}<ActionButton label="تصحيح آخر سؤال عادي" secondary onclick={undo}/>{/if}</div></section>
+    <section class="card question"><span class="eyebrow">الجولة الفاصلة</span><h1>السؤال {western(game.tie.confirmed.length+1)} من {western(game.tie.questions.length)}</h1><ShootoutScoreboard {game}/><p>الفريق الذي يبدأ: <strong style:color={game.teams[tieStarter(game.tie)].color}>{game.teams[tieStarter(game.tie)].name}</strong></p><div class="actions"><ActionButton label={game.tie.pending?'متابعة السؤال':'السؤال التالي'} onclick={openNextTieQuestion}/>{#if !game.tie.pending && game.tie.correctionEligible !== false && game.tie.confirmed.length>0}<ActionButton label="تصحيح آخر سؤال فاصل" secondary onclick={tieUndo}/>{/if}<ActionButton label="إنهاء بالتعادل" secondary onclick={tieEnd}/><ActionButton label="الرئيسية" secondary onclick={goHome}/>{#if game.lastRecord}<ActionButton label="تصحيح آخر سؤال عادي" secondary onclick={undo}/>{/if}</div></section>
   {:else if screen==='tie-question' && game?.tie}
     <section class="card question"><span class="eyebrow">السؤال الفاصل {western(game.tie.confirmed.length+1)} من {western(game.tie.questions.length)}</span><h1>{tieQuestion(game.tie)?.question}</h1>{#if tieQuestion(game.tie)?.image}<QuestionMedia path={tieQuestion(game.tie)!.image!} alt={tieQuestion(game.tie)?.imageAlt} onOpenChange={handleMedia}/>{/if}<QuestionTeams teams={game.teams} owner={tieStarter(game.tie)} ownerLabel="صاحب المحاولة" timer={game.timerEnabled?game.timer:undefined} showAnswerTurn/>{#if game.timerEnabled && game.timer}<TimerRing timer={game.timer} onToggle={()=>updateTimer(!paused)} disabled={busy} primaryLabel={game.activePower==='steal'?'وقت الفريق الخاطف':'وقت الإجابة الأساسي'}/>{/if}<div class="actions"><ActionButton label="إظهار الإجابة" disabled={busy} onclick={()=>tieAction(revealTieAnswer)}/><ActionButton label="العودة للاستعداد" secondary onclick={tieExit}/><ActionButton label="إنهاء بالتعادل" secondary onclick={tieEnd}/>{#if game.lastRecord}<ActionButton label="تصحيح آخر سؤال عادي" secondary onclick={undo}/>{/if}</div></section>
   {:else if screen==='tie-scoring' && game?.tie}

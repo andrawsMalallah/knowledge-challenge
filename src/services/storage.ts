@@ -1,6 +1,8 @@
 import type { Session } from '../types/game';
 import { requireGameControl } from './tabControl';
 import { validateSession } from './sessionValidation';
+import type { QuestionHistory } from './questionHistory.mjs';
+import { emptyQuestionHistory, markQuestionUsed, parseQuestionHistory } from './questionHistory.mjs';
 
 /** One database holds the authoritative checkpoint and immutable media snapshots. */
 const DATABASE = 'arabic-trivia';
@@ -8,6 +10,7 @@ const VERSION = 2;
 const SESSIONS = 'sessions';
 const MEDIA = 'active-media';
 const ACTIVE_KEY = 'active';
+const HISTORY_KEY = 'question-history';
 
 function openDatabase(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -54,6 +57,41 @@ export function saveSession(session: Session): Promise<void> { return saveCheckp
 export function savePreparation(session: Session): Promise<void> { return saveCheckpoint(session, 'preparation'); }
 export function readSession(): Promise<Session | undefined> { return readCheckpoint(ACTIVE_KEY); }
 export function readPreparation(): Promise<Session | undefined> { return readCheckpoint('preparation'); }
+
+function saveCheckpointAndHistory(session:Session,key:string,change:(history:QuestionHistory)=>QuestionHistory):Promise<QuestionHistory>{
+  requireGameControl();validateSession(session);const immutable=structuredClone(session);
+  const write=lastWrite.catch(()=>undefined).then(async()=>{
+    const db=await openDatabase();
+    try{
+      requireGameControl();const tx=db.transaction(SESSIONS,'readwrite');const done=transactionDone(tx);const store=tx.objectStore(SESSIONS);
+      const current=await new Promise<unknown>((resolve,reject)=>{const request=store.get(HISTORY_KEY);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+      const history=change(current===undefined?emptyQuestionHistory():parseQuestionHistory(current));
+      store.put(immutable,key);store.put(history,HISTORY_KEY);await done;return history;
+    }finally{db.close();}
+  });
+  lastWrite=write.then(()=>undefined);return write;
+}
+
+export function savePreparationWithQuestionHistory(session:Session,history:QuestionHistory):Promise<QuestionHistory>{
+  const validated=parseQuestionHistory(history);
+  return saveCheckpointAndHistory(session,'preparation',()=>validated);
+}
+
+export function saveSessionAndMarkQuestionUsed(session:Session,questionId:string):Promise<QuestionHistory>{
+  return saveCheckpointAndHistory(session,ACTIVE_KEY,history=>markQuestionUsed(history,questionId));
+}
+
+export async function readQuestionHistory():Promise<QuestionHistory>{
+  await lastWrite.catch(()=>undefined);const db=await openDatabase();
+  try{return await new Promise<QuestionHistory>((resolve,reject)=>{const request=db.transaction(SESSIONS,'readonly').objectStore(SESSIONS).get(HISTORY_KEY);
+    request.onsuccess=()=>{try{resolve(request.result===undefined?emptyQuestionHistory():parseQuestionHistory(request.result));}catch(error){reject(error);}};request.onerror=()=>reject(request.error);});}
+  finally{db.close();}
+}
+
+export function clearQuestionHistory():Promise<void>{
+  requireGameControl();const write=lastWrite.catch(()=>undefined).then(async()=>{const db=await openDatabase();try{requireGameControl();const tx=db.transaction(SESSIONS,'readwrite');const done=transactionDone(tx);tx.objectStore(SESSIONS).delete(HISTORY_KEY);await done;}finally{db.close();}});
+  lastWrite=write;return write;
+}
 /** Queue deletion with saves and remove checkpoints/media in one transaction. */
 export function deleteSavedGames(): Promise<void> {
   requireGameControl();
@@ -128,10 +166,11 @@ export async function readMedia(url: string): Promise<Blob | undefined> {
 }
 
 /** Replace both session and dedicated media atomically. Failed imports keep the previous game intact. */
-export function installImportedSession(session: Session, media: { source: string; blob: Blob }[]): Promise<void> {
+export function installImportedSession(session: Session, media: { source: string; blob: Blob }[], history?:QuestionHistory): Promise<void> {
   requireGameControl();
   validateSession(session);
   const snapshot = structuredClone(session);
+  const importedHistory=history===undefined?undefined:parseQuestionHistory(history);
   const write = lastWrite.catch(() => undefined).then(async () => {
     const db = await openDatabase();
     try {
@@ -139,6 +178,7 @@ export function installImportedSession(session: Session, media: { source: string
       const tx = db.transaction([SESSIONS, MEDIA], 'readwrite');
       const done = transactionDone(tx);
       tx.objectStore(SESSIONS).put(snapshot, ACTIVE_KEY);
+      if(importedHistory)tx.objectStore(SESSIONS).put(importedHistory,HISTORY_KEY);
       const images = tx.objectStore(MEDIA);
       for (const item of media) images.put(item.blob, item.source);
       await done;

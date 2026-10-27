@@ -44,19 +44,35 @@ function shuffle<T>(items: readonly T[], random: () => number): T[] {
 }
 
 export function assignBalanced(categories: Category[], questions: Question[], random: () => number = Math.random): Tile[] {
+  return assignBalancedAvoiding(categories,questions,new Set(),random).tiles;
+}
+
+export function assignBalancedAvoiding(categories: Category[], questions: Question[], usedIds: ReadonlySet<string>, random: () => number = Math.random): {tiles:Tile[];resetIds:string[]} {
   const issues = validateQuestions(categories, questions, []);
   if (issues.length) throw new Error(issues.join('؛ '));
   const tiles: Tile[] = [];
+  const resetIds = new Set<string>();
   for (const cat of categories) for (const points of tiers) {
     const eligible = questions.filter(q => q.categoryId === cat.id && q.points === points && allowedDifficulty[points].includes(q.difficultyLevel));
-    const groups = new Map<number, Question[]>();
+    let selectable = eligible.filter(question=>!usedIds.has(question.id));
+    let groups = new Map<number, Question[]>();
     // Append in place to avoid repeatedly copying large difficulty pools.
-    for (const question of eligible) {
+    for (const question of selectable) {
       const group=groups.get(question.difficultyLevel);
       if(group)group.push(question);
       else groups.set(question.difficultyLevel,[question]);
     }
-    const matchedGroups = [...groups.values()].filter(group => group.length >= 2);
+    let matchedGroups = [...groups.values()].filter(group => group.length >= 2);
+    if (!matchedGroups.length) {
+      selectable=eligible;
+      groups=new Map<number,Question[]>();
+      for(const question of selectable){
+        const group=groups.get(question.difficultyLevel);
+        if(group)group.push(question);else groups.set(question.difficultyLevel,[question]);
+        resetIds.add(question.id);
+      }
+      matchedGroups=[...groups.values()].filter(group=>group.length>=2);
+    }
     if (!matchedGroups.length) throw new Error(`التصنيف ${cat.name} يفتقر إلى سؤالين متوازنين لفئة ${points}`);
     const groupIndex = Math.floor(random() * matchedGroups.length);
     if (groupIndex < 0 || groupIndex >= matchedGroups.length) throw new Error('مصدر الاختيار العشوائي غير صالح');
@@ -65,13 +81,19 @@ export function assignBalanced(categories: Category[], questions: Question[], ra
     pair.forEach((question, index) => tiles.push({ question, owner: owners[index], completed: false }));
   }
   if (new Set(tiles.map(tile => tile.question.id)).size !== tiles.length) throw new Error('تكرار معرّفات الأسئلة');
-  return tiles;
+  return {tiles,resetIds:[...resetIds]};
 }
 
 export function selectTiebreakers(pool: TieQuestion[], maximum: number, random: () => number = Math.random): TieQuestion[] {
+  return selectTiebreakersAvoiding(pool,maximum,new Set(),random).questions;
+}
+
+export function selectTiebreakersAvoiding(pool: TieQuestion[], maximum: number, usedIds:ReadonlySet<string>, random: () => number = Math.random): {questions:TieQuestion[];resetIds:string[]} {
   if (!Number.isInteger(maximum) || maximum < 1 || maximum > 10) throw new Error('عدد أسئلة الجولة الفاصلة يجب أن يكون بين 1 و10');
   const issues = validateQuestions([], [], pool);
   if (issues.length) throw new Error(issues.join('؛ '));
   if (pool.length < maximum) throw new Error('مخزون الجولة الفاصلة غير كافٍ');
-  return shuffle(pool, random).slice(0, maximum);
+  const unused=pool.filter(question=>!usedIds.has(question.id));
+  const resetIds=unused.length<maximum?pool.map(question=>question.id):[];
+  return {questions:shuffle(unused.length>=maximum?unused:pool, random).slice(0, maximum),resetIds};
 }

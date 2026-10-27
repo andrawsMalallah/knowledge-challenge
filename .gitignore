@@ -12,3 +12,4 @@ docs/QUESTION_BANK_VALIDATION.json
 
 .generated/
 .playwright-cli/
+/questions/

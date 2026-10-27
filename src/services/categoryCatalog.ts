@@ -10,7 +10,7 @@ export function parseCatalog(value: unknown): CategoryCatalog {
     nodes.push({id:category.id,name:category.name,parentId:null,kind:'group',isPlayable:false,questionFile:null});
     for (const subcategory of category.subcategories) nodes.push({
       id:`${category.id}/${subcategory.id}`,name:subcategory.name,parentId:category.id,
-      kind:'topic',isPlayable:true,questionFile:questionFile(category.id,subcategory.id)
+      kind:'topic',isPlayable:true,questionFile:questionFile(category.id,subcategory.id),questionCount:subcategory.questionCount
     });
   }
   return {roots:categories.map(category=>category.id),nodes};

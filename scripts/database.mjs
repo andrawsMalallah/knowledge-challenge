@@ -24,8 +24,9 @@ export function compileDatabase(categories,subcategories,questions){
   for(const row of subcategories){
     const parent=categoryMap.get(row.category_id);
     if(!parent)throw Error(`Subcategory ${row.id}: unknown category_id`);
-    parent.subcategories.push({id:row.slug,name:row.name});
-    subcategoryMap.set(row.id,{category:parent.id,subcategory:row.slug,questions:[]});
+    const catalogEntry={id:row.slug,name:row.name};
+    parent.subcategories.push(catalogEntry);
+    subcategoryMap.set(row.id,{category:parent.id,subcategory:row.slug,questions:[],catalogEntry});
   }
   const catalog={categories:[...categoryMap.values()]};
   parseCategoryTree(catalog);
@@ -73,10 +74,12 @@ export function compileDatabase(categories,subcategories,questions){
     }
     const missing=isTie?[]:[200,400,600].filter(points=>!allowed[points].some(level=>(counts.get(`${points}/${level}`)??0)>=2));
     const playable=isTie?pool.questions.length>=10:missing.length===0;
+    if(!isTie)pool.catalogEntry.questionCount=eligible;
     pools.push({category:pool.category,subcategory:pool.subcategory,total:pool.questions.length,eligible,playable,tiebreaker:isTie,missingPointPairs:missing});
     if(!playable)warnings.push(isTie?'Tiebreaker pool needs 10 questions to support all attempt settings':`${pool.category}/${pool.subcategory}: insufficient balanced pairs at ${missing.join(', ')}`);
     if(eligible!==pool.questions.length)warnings.push(`${path}: ${pool.questions.length-eligible} incompatible difficulty ratings excluded from play`);
   }
+  parseCategoryTree(catalog);
   const regular=pools.filter(pool=>!pool.tiebreaker);
   return {files,report:{categories:categories.length,subcategories:subcategories.length,regularQuestions:questions.length-tie.questions.length,tiebreakers:tie.questions.length,regularPools:regular.length,playablePools:regular.filter(pool=>pool.playable).length,playableRegularQuestions:regular.filter(pool=>pool.playable).reduce((sum,pool)=>sum+pool.eligible,0),errors:[],warnings,pools}};
 }

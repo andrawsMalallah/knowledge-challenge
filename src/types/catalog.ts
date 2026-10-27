@@ -5,6 +5,7 @@ export interface CategoryNode {
   kind: 'group' | 'topic';
   isPlayable: boolean;
   questionFile: string | null;
+  questionCount?: number;
 }
 export interface CategoryCatalog {
   roots: string[];
