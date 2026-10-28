@@ -1,0 +1,587 @@
+# Knowledge Challenge — Question Generation Handoff
+
+This guide and question inventory are generated from the current source tables. Read the inventory below and recheck the source tables before allocating IDs. Do not edit the generated document directly.
+
+## 1. Your task and scope
+
+Generate accurate, varied Arabic trivia questions for the subcategories the owner assigns. Use the IDs in the catalog below. Preserve the existing category names, slugs, IDs, and relationships. Do not add, rename, merge, or remove categories without the owner's instruction.
+
+The owner expects the bank to grow to tens of thousands of questions or more. That is a long-term scale target, not an instruction to generate that many in one batch. No fixed per-subcategory or per-tier generation quota has been agreed for this layout. If scope or quantity is not supplied, ask which subcategories to cover and how many questions per point tier, plus how many tiebreakers. The minimum playable counts below are not generation quotas.
+
+Produce content only. Do not change application code, schemas, validation rules, dependencies, CI, or hosting to make content pass. Do not commit or push unless explicitly instructed.
+
+Place each generated batch as a standalone JSON array in `questions/new/`. Name it exactly `category-slug_subcategory-slug_batch-number.json`, for example `football_players_001.json`. Use the stable slugs from this guide, separate the three parts with underscores, and use a positive batch number padded to at least three digits. Every normal row in the file must reference the subcategory named by the filename; tiebreaker rows may use `subcategory_id:null` in the same batch.
+
+After review, the owner migrates accepted batches with `npm run migrate:questions`. Migration validates the filename and its category/subcategory relationship, merges the rows into `database/questions.json`, moves their source files to `questions/migrated/`, and regenerates `questions/QUESTION_BANK_GUIDE.md`. Read this guide and its inventory before generating so you can avoid existing facts and near-duplicates.
+
+Run `npm run migrate:questions:check` first for a read-only quality report. It prints PASS/FAIL for every pending file and identifies bad rows, fields, characters, duplicate IDs/prompts, filename mismatches, and schema problems. It never changes or moves files. The regular migration command runs the same preflight and makes no changes if any problem is found.
+
+The preflight expects at least one JSON batch in `questions/new/`. When that folder is empty, it reports `no JSON batches found`; that means there is nothing to inspect, not that the migrated bank is invalid.
+
+## 2. Database layout and relationships
+
+The three editable source files at the project root are:
+
+| File | Contents | Relationships |
+| --- | --- | --- |
+| `database/categories.json` | Array of `{id, slug, name}` rows | Parent table |
+| `database/subcategories.json` | Array of `{id, category_id, slug, name}` rows | `category_id` references a category |
+| `database/questions.json` | Array of all normal and tiebreaker question rows | Normal `subcategory_id` references a subcategory |
+
+All new questions go into **one shared questions table**. Do not create one file per subcategory. Do not use the old `public/data/` source layout or wrap rows in a `questions` object. Do not add `totalQuestions`; totals are generated.
+
+A normal question's main category is derived from its subcategory, so a question row must not contain `category_id`. Tiebreakers have no subcategory and are distinguished by `type`.
+
+The build generates browser-facing pools and splits large pools into chunks of at most 1,000 questions, subject to a 25 MiB limit per generated chunk. These are generated-file limits, not a 1,000-question limit on the source table or a subcategory. Never edit `.generated/` or `dist/`.
+
+## 3. Exact question schema
+
+Use these exact field names and types:
+
+| Field | Normal question | Tiebreaker question |
+| --- | --- | --- |
+| `id` | Positive safe integer, globally unique | Same global ID space as normal questions |
+| `subcategory_id` | Existing numeric subcategory ID from this guide | JSON `null` |
+| `type` | `"normal"` | `"tiebreaker"` |
+| `points` | `200`, `400`, or `600` | `0` |
+| `difficultyLevel` | See playable difficulty table below | `4` or `5` |
+| `question` | Nonempty Arabic or Latin string | Nonempty Arabic or Latin string |
+| `answer` | Nonempty Arabic or Latin string | Nonempty Arabic or Latin string |
+| `format` | `"text"` | `"text"` |
+| `image_path` | JSON `null` | JSON `null` |
+| `audio_path` | JSON `null` | JSON `null` |
+| `image_alt` | Optional; omit or use JSON `null` | Optional; omit or use JSON `null` |
+
+All fields except `image_alt` are required. No additional fields are accepted. In particular, do not add explanations, choices/options, source URLs, review status, tags, language, schema versions, category names, or totals to records. If research notes are requested, deliver them separately from the JSON table.
+
+### Valid row examples
+
+These examples illustrate structure only; do not append them automatically. Their IDs must be replaced if already occupied. One normal example does not make a subcategory playable.
+
+```json
+[
+  {
+    "id": 1,
+    "subcategory_id": 1,
+    "type": "normal",
+    "points": 200,
+    "difficultyLevel": 1,
+    "question": "كم عدد أيام الأسبوع؟",
+    "answer": "سبعة أيام",
+    "format": "text",
+    "image_path": null,
+    "audio_path": null
+  },
+  {
+    "id": 2,
+    "subcategory_id": null,
+    "type": "tiebreaker",
+    "points": 0,
+    "difficultyLevel": 4,
+    "question": "ما اسم الوحدة الدولية لقياس النشاط الإشعاعي؟",
+    "answer": "البيكريل",
+    "format": "text",
+    "image_path": null,
+    "audio_path": null
+  }
+]
+```
+
+### ID and merge rules
+
+- IDs are numbers, not strings. Use positive integers up to `9007199254740991`.
+- Question IDs are unique across the entire table, including tiebreakers. Never restart numbering for each subcategory.
+- For a single writer, inspect the latest table and start after its maximum question ID. Keep every existing ID stable; never renumber to fill gaps or reuse a removed ID.
+- If multiple agents are working, coordinate disjoint ID ranges before generation and have one owner merge their results. Do not independently choose the same next ID.
+- Preserve existing rows. When repository editing is authorized, merge validated additions into the existing array; never replace the table with only the new batch.
+- With no repository access, ask for the current maximum ID or an allocated ID range. Return the requested batch as a standalone valid JSON array for merging, not as a claimed complete replacement database.
+- Use UTF-8 JSON with double quotes, numeric numbers, and literal `null`. No comments, trailing commas, or Markdown inside actual JSON files.
+
+## 4. Language and editorial rules
+
+### Established content requirements
+
+- **Write question sentences in Arabic.** Use the established English names of foreign films, series, anime, cartoons, video games, companies, brands, commercial products and platforms, fictional characters, songs, and albums in both questions and answers when those names are intended. Use Arabic for football players and clubs, countries, cities, originally Arabic names, and general descriptive terms. Use an established English title for non-English works when available; do not invent a literal translation.
+- Foreign real people other than football players, fictional places, books, and other unspecified works require case-by-case review; do not convert them in bulk without the owner's direction. Check names in context, preserve the tested fact, and avoid revealing the answer.
+- Validation accepts Arabic and Latin letters in question and answer fields, including an English-only answer. It cannot determine whether English is an appropriate name: reviewers must enforce this policy and reject arbitrary English wording. Other writing systems remain unsupported.
+- Category display names are a separate rule: preserve their exact original wording, including English franchise titles in the catalog below. English slugs and schema keys remain unchanged.
+- Numbers and punctuation are allowed. Numeric answers must still be strings, for example `"١١"` or `"11"`.
+- Verify factual accuracy. Avoid exact duplicates and near-duplicates, including rephrased versions of the same fact.
+- Match the selected subcategory. Do not copy normal questions into the tiebreaker pool.
+- Assign difficulty honestly. Do not silently relabel a difficult question as easy just to fill a point tier.
+
+### Expansion and research policy
+
+- Aim for an approximate 50/50 mix of familiar trivia and fresh angles; accuracy, category fit, and variety take priority over a numerical quota.
+- An answer may recur when each question tests a distinct fact. Prefer varied answers; for a batch of 30, aim for no more than two occurrences of the same answer when practical.
+- Explore quiz games and public sources for ideas lawfully, without copying protected question lists or extracting paid content. Write original Arabic questions and independently verify facts with reliable sources. Record sources and dates outside JSON where needed.
+- A proposed pilot of three subcategories with 30 questions each is not authorization or a fixed quota. Do not generate or migrate batches without the owner's instruction. Do not change old questions without explicit authorization and a review of proposed changes.
+
+### Recommended quality checks for the generating agent
+
+- Write a clear, self-contained prompt with one defensible answer. Avoid vague superlatives, trick ambiguity, opinion questions, and clues that accidentally reveal the answer.
+- Prefer durable facts. Date or scope changing statistics, records, squads, transfers, awards, and similar facts explicitly; verify them against reliable sources. Never invent a source or claim a fact was checked when it was not.
+- Verify quotes and attributed lines exactly. Clarify the work, adaptation, season, edition, competition, or period when ambiguity would otherwise exist.
+- Keep answers concise but sufficient for the host to judge them. Do not add an explanation paragraph to the answer as a substitute for the unsupported explanation field.
+- Check for semantic duplicates across the entire bank, especially overlapping mixed/franchise/general-knowledge subcategories. Repeating an answer is not automatically a duplicate, but repeating the tested fact is usually redundant.
+- If uncertain about a fact, omit it and report the uncertainty rather than inventing an answer. Review difficulty consistently across the batch.
+
+## 5. Points, difficulty, and playability
+
+### Normal questions
+
+| Points | Allowed difficulty for gameplay | Minimum matched inventory per subcategory |
+| --- | --- | --- |
+| 200 | 1 or 2 | Two distinct questions sharing one allowed difficulty |
+| 400 | 2 or 3 | Two distinct questions sharing one allowed difficulty |
+| 600 | 3 or 4 | Two distinct questions sharing one allowed difficulty |
+
+A playable subcategory needs all three pairs: **at least six compatible questions**. At 200 points, one difficulty-1 and one difficulty-2 question do **not** form a matched pair; two difficulty-1 questions or two difficulty-2 questions do. Apply the same rule to the other tiers. The game gives each team one question from each point tier with matched difficulty.
+
+The source parser accepts normal difficulty values 1–5, but combinations outside the table are excluded from gameplay and reported. Generate playable combinations by default. Normal difficulty 5 is not currently playable at any point tier. Difficulty ratings do not override the points field.
+
+A small/default/large match selects 4/6/8 playable subcategories and allocates 24/36/48 normal questions respectively. Do not claim the whole game is ready merely because one subcategory has enough questions.
+
+### Used-question history and bank depth
+
+- A question enters the used-question history only when it is displayed; preparing or starting a game does not mark every assigned question as used.
+- New games avoid used questions. When one subcategory/points pool no longer has enough eligible questions, only that exhausted pool is made eligible again.
+- The application displays each subcategory's remaining eligible count from the generated catalog and updates it after question display, history reset, backup import, and automatic pool rollover.
+- With two displayed questions per tier in a completed appearance, the number of appearances before rollover depends on the current pool size.
+- Used-question history is stored separately from the saved game. Backup format v2 includes it; importing a legacy v1 backup preserves the destination browser's existing history.
+- Existing games retain frozen assigned questions. Start a new game when testing newly migrated bank content.
+
+### Tiebreakers
+
+- Use `type:"tiebreaker"`, `subcategory_id:null`, `points:0`, and difficulty 4 or 5.
+- Generate a distinct pool of hard questions, not copies of normal records.
+- Two distinct questions are required per chosen attempt per team: 2 questions support one attempt each; **10 questions support all five-attempt settings**.
+- A larger pool adds variety. Ten is the full-settings minimum, not a maximum or an agreed production quota.
+- Tiebreakers will always remain text only. There are no image/audio tiebreakers.
+
+## 6. Media and special formats
+
+Only text questions and answers are currently supported. Every row must use `format:"text"`, `image_path:null`, and `audio_path:null`. Omit `image_alt` or set it to null.
+
+Reserved asset folders are `storage/images/questions/` and `storage/audio/`. `storage/images/icons/` contains application icons, not question media. These folders do not authorize or enable image/audio question generation. Do not download assets or populate media fields for this task.
+
+Emoji clues may be embedded in the text string, with an Arabic instruction such as «ما اسم الفيلم الذي تشير إليه الرموز التالية؟». A prompt consisting only of emoji fails the current text requirement: include Arabic words. Apply the selective naming policy to answers and make the intended clue unambiguous. A category name never overrides the text-only schema. Defer any question that inherently requires an unavailable image or audio clip rather than inventing a media format.
+
+## 7. Validation and delivery
+
+Before delivering a batch:
+
+1. Confirm scope, quota, and ID allocation; read the latest existing questions if available.
+2. Verify every `subcategory_id` against the catalog. Preserve names and IDs.
+3. Check schema, global ID uniqueness, permitted text and selective naming, null media fields, allowed points/difficulty, and exact/semantic duplicates.
+4. Verify factual accuracy separately from structural validation. The validator is not a fact checker and does not prove semantic uniqueness.
+5. Report question counts by subcategory, points, and difficulty, plus the separate tiebreaker count. State incomplete tiers and any deferred work accurately.
+6. Keep factual research notes separate from the runtime JSON. For volatile facts, record the authoritative source and verification date in the delivery summary.
+7. If working in the repository and pending batches exist, run the read-only migration preflight before any mutation:
+
+```powershell
+npm run migrate:questions:check
+```
+
+8. After accepted content is migrated, run:
+
+```powershell
+npm run validate:bank
+node --test scripts/database.test.mjs scripts/question-history.test.mjs
+npm run check
+npm run build
+```
+
+Review `docs/QUESTION_BANK_VALIDATION.json`. Structural errors block the build; empty/insufficient pools and excluded difficulty ratings produce warnings. A successful build does not mean every subcategory is playable. Do not change validators to hide failures. If tools or the repository are unavailable, explicitly say checks were not executed.
+
+For manual acceptance, preview the production build, open New Game, select populated subcategories, and check creation, question/answer display, scoring, and tiebreakers. Existing matches retain frozen questions: start a new match to test new content. Do not claim gameplay was tested when only the JSON was inspected.
+
+Without repository access, deliver the requested valid JSON array plus a brief separate batch summary. With authorized repository access, update only the source question table and any separately requested handoff notes. No commits or pushes without explicit authorization.
+
+## 8. Complete current catalog
+
+Each heading identifies the **main category ID**, display name, and stable slug. In each table, use the first column as the question's numeric **`subcategory_id`**. The category ID is not a question field. All subcategory IDs below are globally unique.
+
+### Category 1: معلومات عامة
+
+Slug: `general-knowledge`. Subcategories: 1.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 1 | معلومات متنوعة | `mixed` |
+
+### Category 2: كرة القدم
+
+Slug: `football`. Subcategories: 16.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 2 | لاعبو كرة القدم | `players` |
+| 3 | أندية كرة القدم | `clubs` |
+| 4 | بطولات ودوريات كرة القدم | `competitions` |
+| 5 | منتخبات كرة القدم | `national-teams` |
+| 6 | مدربو كرة القدم | `coaches` |
+| 7 | تاريخ كرة القدم وأساطيرها | `history-and-legends` |
+| 8 | قوانين كرة القدم | `rules` |
+| 9 | ملاعب كرة القدم | `stadiums` |
+| 10 | انتقالات كرة القدم | `transfers` |
+| 11 | أرقام وإحصائيات كرة القدم | `records-and-statistics` |
+| 12 | خمن اللاعب من مسيرته | `guess-player-career` |
+| 13 | خمن اللاعب من إحصائياته | `guess-player-statistics` |
+| 14 | خمن النادي من لاعبيه | `guess-club-players` |
+| 15 | خمن المنتخب من لاعبيه | `guess-national-team-players` |
+| 16 | خمن المدرب من مسيرته | `guess-coach-career` |
+| 17 | خمن الفريق من إنجازاته | `guess-team-achievements` |
+
+### Category 3: رياضات متنوعة
+
+Slug: `sports`. Subcategories: 7.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 18 | كرة السلة | `basketball` |
+| 19 | التنس | `tennis` |
+| 20 | المصارعة الحرة ونجومها | `wrestling` |
+| 21 | سباقات الفورمولا 1 | `formula-one` |
+| 22 | الألعاب الأولمبية | `olympics` |
+| 23 | الرياضات الإلكترونية | `esports` |
+| 24 | رياضيون من مختلف الرياضات | `athletes` |
+
+### Category 4: معلومات الأفلام والمسلسلات
+
+Slug: `movies-and-tv`. Subcategories: 17.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 25 | أفلام عالمية متنوعة | `mixed-movies` |
+| 26 | أفلام عربية | `arabic-movies` |
+| 27 | أفلام ديزني وبيكسار | `disney-and-pixar` |
+| 28 | أفلام الأبطال الخارقين | `superhero-movies` |
+| 29 | أفلام فائزة بالأوسكار | `oscar-winning-movies` |
+| 30 | ممثلون وممثلات | `actors` |
+| 31 | مخرجون سينمائيون | `directors` |
+| 32 | مسلسلات عالمية متنوعة | `international-tv-series` |
+| 33 | مسلسلات نتفليكس الأصلية | `netflix-originals` |
+| 34 | شخصيات الأفلام والمسلسلات | `characters` |
+| 35 | خمن الممثل من أدواره | `guess-actor-roles` |
+| 36 | خمن الفيلم من القصة | `guess-movie-plot` |
+| 37 | خمن المسلسل من القصة | `guess-series-plot` |
+| 38 | خمن الفيلم من الاقتباس | `guess-movie-quote` |
+| 39 | خمن المسلسل من الاقتباس | `guess-series-quote` |
+| 40 | خمن الفيلم من الشخصيات | `guess-movie-characters` |
+| 41 | خمن المسلسل من الشخصيات | `guess-series-characters` |
+
+### Category 5: أفلام وسلاسل سينمائية
+
+Slug: `movies`. Subcategories: 14.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 42 | Harry Potter | `harry-potter` |
+| 43 | The Lord of the Rings | `the-lord-of-the-rings` |
+| 44 | Star Wars | `star-wars` |
+| 45 | The Godfather | `the-godfather` |
+| 46 | The Dark Knight Trilogy | `the-dark-knight-trilogy` |
+| 47 | Fast & Furious | `fast-furious` |
+| 48 | Mission: Impossible | `mission-impossible` |
+| 49 | Avatar | `avatar` |
+| 50 | Titanic | `titanic` |
+| 51 | Interstellar | `interstellar` |
+| 52 | Inception | `inception` |
+| 53 | The Matrix | `the-matrix` |
+| 54 | John Wick | `john-wick` |
+| 55 | Pirates of the Caribbean | `pirates-of-the-caribbean` |
+
+### Category 6: مسلسلات
+
+Slug: `tv-series`. Subcategories: 20.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 56 | Breaking Bad | `breaking-bad` |
+| 57 | Better Call Saul | `better-call-saul` |
+| 58 | Game of Thrones | `game-of-thrones` |
+| 59 | House of the Dragon | `house-of-the-dragon` |
+| 60 | Friends | `friends` |
+| 61 | The Office | `the-office` |
+| 62 | Prison Break | `prison-break` |
+| 63 | Lost | `lost` |
+| 64 | The Walking Dead | `the-walking-dead` |
+| 65 | Stranger Things | `stranger-things` |
+| 66 | Dark | `dark` |
+| 67 | Sherlock | `sherlock` |
+| 68 | Peaky Blinders | `peaky-blinders` |
+| 69 | The Boys | `the-boys` |
+| 70 | Squid Game | `squid-game` |
+| 71 | The Last of Us | `the-last-of-us` |
+| 72 | Money Heist | `money-heist` |
+| 73 | Vikings | `vikings` |
+| 74 | The Sopranos | `the-sopranos` |
+| 75 | How I Met Your Mother | `how-i-met-your-mother` |
+
+### Category 7: أنمي وكرتون
+
+Slug: `anime-and-cartoons`. Subcategories: 36.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 76 | Naruto | `naruto` |
+| 77 | One Piece | `one-piece` |
+| 78 | Dragon Ball | `dragon-ball` |
+| 79 | Attack on Titan | `attack-on-titan` |
+| 80 | Death Note | `death-note` |
+| 81 | Demon Slayer | `demon-slayer` |
+| 82 | Jujutsu Kaisen | `jujutsu-kaisen` |
+| 83 | Hunter × Hunter | `hunter-hunter` |
+| 84 | Bleach | `bleach` |
+| 85 | Fullmetal Alchemist | `fullmetal-alchemist` |
+| 86 | Tokyo Ghoul | `tokyo-ghoul` |
+| 87 | Detective Conan | `detective-conan` |
+| 88 | Pokémon | `pokemon` |
+| 89 | Yu-Gi-Oh! | `yu-gi-oh` |
+| 90 | Captain Tsubasa | `captain-tsubasa` |
+| 91 | Digimon | `digimon` |
+| 92 | Code Geass | `code-geass` |
+| 93 | Steins;Gate | `steins-gate` |
+| 94 | أفلام استوديو غيبلي | `studio-ghibli-movies` |
+| 95 | أفلام أنمي متنوعة | `mixed-anime-movies` |
+| 96 | Tom and Jerry | `tom-and-jerry` |
+| 97 | SpongeBob SquarePants | `spongebob-squarepants` |
+| 98 | The Simpsons | `the-simpsons` |
+| 99 | Looney Tunes | `looney-tunes` |
+| 100 | Avatar: The Last Airbender | `avatar-the-last-airbender` |
+| 101 | Rick and Morty | `rick-and-morty` |
+| 102 | Family Guy | `family-guy` |
+| 103 | أنمي متنوع | `mixed-anime` |
+| 104 | كرتون متنوع | `mixed-cartoons` |
+| 105 | شخصيات الأنمي | `anime-characters` |
+| 106 | شخصيات الكرتون | `cartoon-characters` |
+| 107 | أشرار الأنمي والكرتون | `anime-and-cartoon-villains` |
+| 108 | قوى وقدرات الأنمي | `anime-powers` |
+| 109 | معارك الأنمي | `anime-battles` |
+| 110 | خمن شخصية الأنمي من الوصف | `guess-anime-character-description` |
+| 111 | خمن الأنمي من الشخصية | `guess-anime-character` |
+
+### Category 8: ألعاب فيديو
+
+Slug: `video-games`. Subcategories: 6.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 112 | معلومات ألعاب فيديو متنوعة | `mixed-games` |
+| 113 | أشرار ألعاب الفيديو | `villains` |
+| 114 | أسلحة وأدوات ألعاب الفيديو | `weapons-and-tools` |
+| 115 | خمن شخصية ألعاب الفيديو من الوصف | `guess-character-description` |
+| 116 | خمن لعبة الفيديو من الوصف | `guess-game-description` |
+| 117 | خمن لعبة الفيديو من الشخصيات | `guess-game-characters` |
+
+### Category 9: تاريخ وحضارات
+
+Slug: `history-and-civilizations`. Subcategories: 4.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 118 | شخصيات تاريخية | `historical-figures` |
+| 119 | أحداث غيرت العالم | `world-changing-events` |
+| 120 | حضارات قديمة | `ancient-civilizations` |
+| 121 | ألغاز واكتشافات تاريخية | `historical-mysteries-and-discoveries` |
+
+### Category 10: جغرافيا ودول
+
+Slug: `geography-and-countries`. Subcategories: 6.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 122 | دول وعواصم العالم | `countries-and-capitals` |
+| 123 | حدود الدول وجيرانها | `borders-and-neighbors` |
+| 124 | مساحات الدول وسكانها | `area-and-population` |
+| 125 | عملات الدول | `currencies` |
+| 126 | مواقع الدول وقاراتها | `locations-and-continents` |
+| 127 | خمن الدولة من وصفها | `guess-country-description` |
+
+### Category 11: علوم وطبيعة
+
+Slug: `science-and-nature`. Subcategories: 2.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 128 | معلومات علمية متنوعة | `mixed-science` |
+| 129 | ظواهر طبيعية | `natural-phenomena` |
+
+### Category 12: حيوانات
+
+Slug: `animals`. Subcategories: 1.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 130 | عالم الحيوان | `animal-world` |
+
+### Category 13: فضاء وفلك
+
+Slug: `space-and-astronomy`. Subcategories: 3.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 131 | المجموعة الشمسية | `solar-system` |
+| 132 | النجوم والمجرات | `stars-and-galaxies` |
+| 133 | استكشاف الفضاء | `space-exploration` |
+
+### Category 14: موسيقى وفنون
+
+Slug: `music-and-arts`. Subcategories: 4.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 134 | أغاني باللغة الإنجليزية | `english-language-songs` |
+| 135 | مطربون وفرق موسيقية عالمية | `international-singers-and-bands` |
+| 136 | آلات موسيقية | `musical-instruments` |
+| 137 | لوحات ورسامون | `paintings-and-artists` |
+
+### Category 15: طعام ومطبخ
+
+Slug: `food-and-cooking`. Subcategories: 2.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 138 | خمن الطبق من مكوناته | `guess-dish-ingredients` |
+| 139 | أطباق من حول العالم | `international-dishes` |
+
+### Category 16: ألغاز وتحديات ذهنية
+
+Slug: `riddles-and-brain-teasers`. Subcategories: 12.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 140 | ألغاز منطق واستنتاج | `logic-and-deduction` |
+| 141 | ألغاز التحقيق والغموض | `mystery-puzzles` |
+| 142 | ألغاز التلاعب بالكلمات | `wordplay` |
+| 143 | خمن الكلمة من تعريفها | `guess-word-definition` |
+| 144 | رتب الحروف | `unscramble-letters` |
+| 145 | أكمل الكلمة | `complete-word` |
+| 146 | أكمل المثل | `complete-proverb` |
+| 147 | ألغاز ماذا أنا؟ | `what-am-i` |
+| 148 | ما الرابط المشترك؟ | `common-link` |
+| 149 | اكتشف العنصر المختلف | `odd-one-out` |
+| 150 | صح أم خطأ: معلومات متنوعة | `general-true-or-false` |
+| 151 | أكمل المعلومة | `complete-fact` |
+
+### Category 17: تكنولوجيا وإنترنت
+
+Slug: `technology-and-inventions`. Subcategories: 4.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 152 | معلومات تكنولوجية متنوعة | `mixed-technology` |
+| 153 | مصطلحات تقنية | `technical-terms` |
+| 154 | أجهزة الكمبيوتر | `computers` |
+| 155 | صناع المحتوى والمؤثرون | `content-creators` |
+
+### Category 18: معالم وآثار
+
+Slug: `landmarks-and-antiquities`. Subcategories: 2.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 156 | تاريخ المعالم والآثار | `landmark-history` |
+| 157 | أين يقع هذا المعلم؟ | `landmark-locations` |
+
+### Category 19: صحة وجسم الإنسان
+
+Slug: `health-and-human-body`. Subcategories: 2.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 158 | أعضاء وأجهزة الجسم | `organs-and-body-systems` |
+| 159 | مصطلحات واكتشافات طبية | `medical-terms-and-discoveries` |
+
+### Category 20: لغة وثقافة وأدب
+
+Slug: `language-culture-and-literature`. Subcategories: 3.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 160 | المرادفات والأضداد | `synonyms-and-antonyms` |
+| 161 | كتب وكتّاب | `books-and-authors` |
+| 162 | معلومات ثقافية متنوعة | `mixed-culture` |
+
+### Category 21: أساطير
+
+Slug: `mythology`. Subcategories: 3.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 163 | أساطير شعوب العالم | `world-mythology` |
+| 164 | آلهة وكائنات أسطورية | `gods-and-mythical-creatures` |
+| 165 | الأساطير في الأفلام والألعاب | `mythology-in-movies-and-games` |
+
+### Category 22: سيارات ومركبات
+
+Slug: `cars-and-vehicles`. Subcategories: 1.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 166 | معلومات عامة عن السيارات | `general-car-knowledge` |
+
+### Category 23: شركات وعلامات تجارية
+
+Slug: `companies-and-brands`. Subcategories: 1.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 167 | شركات وعلامات تجارية عالمية | `global-companies-and-brands` |
+
+### Category 24: خمن من الإيموجي
+
+Slug: `emoji-quizzes`. Subcategories: 16.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 168 | خمن الفيلم من الإيموجي | `guess-movie` |
+| 169 | خمن المسلسل من الإيموجي | `guess-series` |
+| 170 | خمن شخصية فيلم من الإيموجي | `guess-movie-character` |
+| 171 | خمن شخصية مسلسل من الإيموجي | `guess-series-character` |
+| 172 | خمن لاعب كرة القدم من الإيموجي | `guess-football-player` |
+| 173 | خمن نادي كرة القدم من الإيموجي | `guess-football-club` |
+| 174 | خمن منتخب كرة القدم من الإيموجي | `guess-national-team` |
+| 175 | خمن الدولة من الإيموجي | `guess-country` |
+| 176 | خمن المدينة من الإيموجي | `guess-city` |
+| 177 | خمن الكلمة من الإيموجي | `guess-word` |
+| 178 | خمن العبارة من الإيموجي | `guess-phrase` |
+| 179 | خمن لعبة الفيديو من الإيموجي | `guess-video-game` |
+| 180 | خمن الأنمي من الإيموجي | `guess-anime` |
+| 181 | خمن الأغنية من الإيموجي | `guess-song` |
+| 182 | خمن الشخصية المشهورة من الإيموجي | `guess-celebrity` |
+| 183 | خمن العلامة التجارية من الإيموجي | `guess-brand` |
+
+### Category 25: مهن ووظائف
+
+Slug: `professions`. Subcategories: 2.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 184 | خمن المهنة من الوصف | `guess-profession-description` |
+| 185 | أدوات المهن ومهامها | `tools-and-duties` |
+
+### Category 26: اختراعات ومخترعون
+
+Slug: `inventions-and-inventors`. Subcategories: 1.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 186 | اختراعات ومخترعوها | `inventions-and-inventors` |
+
+### Category 27: حقائق غريبة وأرقام قياسية
+
+Slug: `strange-facts-and-records`. Subcategories: 5.
+
+| subcategory_id | Exact display name | Slug |
+| --- | --- | --- |
+| 187 | حقائق غريبة موثقة | `verified-strange-facts` |
+| 188 | أرقام قياسية عالمية | `world-records` |
+| 189 | أغلى الأشياء المباعة في المزادات | `auction-records` |
+| 190 | حقيقة أم خرافة؟ | `fact-or-myth` |
+| 191 | خمن الرقم القياسي | `guess-record` |
+
+---
+
+Catalog source: `database/categories.json` and `database/subcategories.json`. Rules checked against `README.md`, `scripts/database.mjs`, `src/services/contentSchema.mjs`, and the gameplay difficulty rules. If the repository later changes, reconcile this snapshot with the current source before generating more content.

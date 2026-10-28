@@ -2,7 +2,7 @@
 
 An Arabic, right-to-left trivia game for two teams sharing one host-controlled device. Built with Svelte 5, TypeScript and Vite. It is a static, installable PWA with local saves; no backend, accounts, database server or API keys are required.
 
-**The repository intentionally ships with an empty question bank.** You can deploy and open the app, but a new match cannot start until you add enough normal categories/questions and tiebreakers. Dummy/demo content is not included.
+The question bank lives in `database/`. Its contents can grow over time; run `npm run validate:bank` for current totals and playability.
 
 ## Contents
 
@@ -48,6 +48,8 @@ Open http://127.0.0.1:4173/. Production preview enables the PWA/service worker a
 | `npm ci` | Install exactly the dependencies in `package-lock.json`. |
 | `npm run dev` | Start Vite development mode. |
 | `npm run validate:bank` | Validate the catalog and question files; regenerate the local validation report. |
+| `npm run migrate:questions:check` | Check pending batches without changing files. |
+| `npm run migrate:questions` | Validate and migrate pending batches, archive them, and regenerate the question guide. |
 | `npm run check` | Check Svelte and strict TypeScript, including unused locals and parameters. |
 | `npm run build` | Validate content, run the type/Svelte check, then generate `dist/`. |
 | `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` | Serve the production build locally. |
@@ -188,7 +190,7 @@ Keep IDs and slugs stable. Display names may contain Arabic or Latin letters, in
 
 ## Unified question-file shape
 
-`database/questions.json` holds **all normal questions and tiebreakers** in one array. The actual bank remains empty. This example shows the row shapes only:
+`database/questions.json` holds **all normal questions and tiebreakers** in one array. This example shows the row shapes only:
 
 ```json
 [
@@ -229,11 +231,12 @@ The build reads the source tables in memory. Chunking bounds individual browser 
 
 ### Language and content
 
-- **Questions and answers must be fully Arabic.**
-- Use Arabic names/transliterations rather than Latin text, including foreign people, places, films and brands.
+- Write question sentences in Arabic. Use established English names for foreign works, games, brands, commercial products and platforms, fictional characters, songs and albums.
+- Use Arabic for football players and clubs, countries, cities, originally Arabic names and general descriptions. Review other real people, fictional places and unspecified works individually.
+- The validator accepts Arabic and Latin letters, including English-only answers. Editorial review must ensure English is used according to the naming policy.
 - Numbers and punctuation are allowed. Numeric answers may be written as text using digits.
 - Verify factual accuracy and avoid duplicate or near-duplicate questions. Validation checks structure and duplicate normalized prompts within a pool; it does not fact-check answers or prove semantic uniqueness.
-- Category display names may use Arabic or Latin letters. Questions and answers remain Arabic; IDs/folder names remain stable English slugs.
+- Category display names may use Arabic or Latin letters; IDs and folder names remain stable English slugs.
 
 ### Text now; normal media later
 
@@ -284,14 +287,16 @@ Two distinct questions are needed per selected attempt per team: 2 for one attem
 
 ## Add or update content
 
-1. Add main category rows to `database/categories.json`.
-2. Add subcategory rows referencing their parent IDs to `database/subcategories.json`.
-3. Add Arabic normal and tiebreaker rows to `database/questions.json`. Keep IDs stable and unique; use null subcategory IDs for tiebreakers.
-4. Run `npm run validate:bank`, `node --test scripts/database.test.mjs`, and `npm run build`.
-5. Review `docs/QUESTION_BANK_VALIDATION.json` for insufficient balanced pools, excluded ratings and tiebreaker capacity.
-6. Preview the production build and check category selection, match creation, scoring, shootout, backups and offline recovery.
+The source tables in `database/` are authoritative. The local, Git-ignored `questions/QUESTION_BANK_GUIDE.md` combines the generation guide, naming rules, catalog and current question inventory; `scripts/question-guide-template.txt` supplies its guide text. The inventory is regenerated after a successful migration and should not be edited by hand. If the local `questions/` folder is absent, restore it before using the batch workflow.
 
-Validation never rewrites source tables. Development and builds regenerate `.generated/public/`; commit source tables and storage assets only when publication is authorized. Existing matches retain frozen content. Start a new game to use updated questions.
+1. Read the guide and current bank; preserve existing categories, IDs and relationships. Allocate globally unique question IDs after the current maximum.
+2. Place each reviewed JSON array in `questions/new/`, named `category-slug_subcategory-slug_batch-number.json` (for example, `football_players_002.json`). The guide describes the schema and editorial rules.
+3. Run `npm run migrate:questions:check`. It reports batch and row errors without changing files. An empty `new/` folder means there are no batches to check.
+4. After reviewing the batches, run `npm run migrate:questions`. It validates again, merges them into `database/questions.json`, regenerates the combined guide and moves the batches to `questions/migrated/`.
+5. Run `npm run validate:bank`, `node --test scripts/database.test.mjs`, and `npm run build`. Review `docs/QUESTION_BANK_VALIDATION.json` for playability warnings.
+6. Preview the production build and check category selection and a new match. Existing matches retain frozen content; start a new game to use updated questions.
+
+Structural checks do not verify facts or catch all semantic duplicates. Research and editorial review remain necessary. Development and builds regenerate `.generated/public/`; commit source tables and assets only when publication is authorized.
 
 ## Build and release checks
 
@@ -351,7 +356,7 @@ This is **plain Svelte + Vite**, not SvelteKit. Use the explicit settings below 
    | Node version | `24.19.0` via checked-in `.node-version`; set `NODE_VERSION=24.19.0` if an explicit dashboard override is needed |
 
 4. Save and deploy. Cloudflare installs the locked npm dependencies and runs the build.
-5. Open the HTTPS deployment. Confirm that the app loads and its intentionally empty question bank disables game creation.
+5. Open the HTTPS deployment. Confirm that the app loads, categories appear, and a new game can be created with sufficient question pools.
 6. Inspect the served security/cache headers and verify that `/sw.js`, `/manifest.webmanifest` and `/data/categories.json` are accessible.
 7. Add an optional custom domain in Pages. Export any match you need before switching origins.
 
@@ -367,13 +372,13 @@ Official references: [Pages Git integration](https://developers.cloudflare.com/p
 
 | Symptom | Check |
 | --- | --- |
-| No categories appear | An empty catalog is intentional initially. Add related rows to `database/categories.json` and `database/subcategories.json`; folders alone do not appear. |
+| No categories appear | Check the source catalog and build output; folders alone do not create categories. |
 | Create Game is disabled | Select the chosen 4/6/8 subcategories and provide enough tiebreakers for the selected attempts. |
 | Creation reports insufficient normal questions | Supply a matched pair at each 200/400/600 tier and check their allowed difficulty. |
-| Validation rejects a question | Check unique numeric IDs, foreign keys, question type, Arabic-only text, `format:"text"` and null media paths. |
+| Validation rejects a question | Check unique numeric IDs, foreign keys, question type, permitted Arabic/Latin text, `format:"text"` and null media paths. |
 | Changed JSON does not affect the current match | Saved questions are frozen. Accept the app update on Home and start a new game for new content. |
 | Old interface remains after deployment | Return Home and accept the waiting update. Check a private profile to distinguish cache state from a broken deployment. Export saves before clearing site data. |
 | Read-only tab overlay | Return to the controlling tab or use the safe takeover action. Ensure HTTPS/localhost and Web Locks support. |
 | Clean install fails with a Windows native-binary lock | Stop this project's dev/preview server and build helpers, then rerun `npm ci`. |
 | Cloudflare build uses the wrong output | Use `npm run build` and `dist`; this project is not SvelteKit. |
-| An empty-bank warning appears | Expected until content is added. An empty bank is valid, but not playable. |
+| An empty-bank warning appears | Check that the intended source tables contain questions and rebuild; an empty bank is valid but not playable. |

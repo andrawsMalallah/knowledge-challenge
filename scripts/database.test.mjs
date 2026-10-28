@@ -19,7 +19,8 @@ test('foreign keys and globally unique question IDs are enforced',()=>{
 });
 test('normal and tiebreaker constraints remain enforced',()=>{
   assert.throws(()=>compileDatabase(categories,subcategories,[{...question(1),type:'tiebreaker'}]),/null/);
-  assert.throws(()=>compileDatabase(categories,subcategories,[{...question(1),question:'English'}]));
+  assert.doesNotThrow(()=>compileDatabase(categories,subcategories,[{...question(1),question:'ما اسم لعبة Minecraft؟',answer:'Minecraft'}]));
+  assert.throws(()=>compileDatabase(categories,subcategories,[{...question(1),question:'漢字'}]));
   assert.throws(()=>compileDatabase(categories,subcategories,[{...question(1),format:'image',image_path:'/images/questions/a.png'}]));
   const {files}=compileDatabase(categories,subcategories,[{...question(1),type:'tiebreaker',subcategory_id:null,points:0,difficultyLevel:4}]);
   assert.equal(files.get('/data/questions/tiebreaker/questions.json').totalQuestions,1);
@@ -50,6 +51,9 @@ test('migrated question list contains every normal and tiebreaker question',()=>
     {...question(2),type:'tiebreaker',subcategory_id:null,points:0,difficultyLevel:5},
   ];
   const list=buildQuestionList(categories,subcategories,questions);
+  assert.match(list,/Question Generation Handoff/);
+  assert.match(list,/Expansion and research policy/);
+  assert.match(list,/Current Question Bank/);
   assert.match(list,/Total migrated questions: \*\*2\*\* \(1 normal, 1 tiebreakers\)/);
   assert.match(list,/Question IDs: \*\*1-2\*\*\. Next available ID: \*\*3\*\*/);
   assert.match(list,/Playable subcategories: \*\*0\/1\*\*/);
@@ -72,16 +76,20 @@ test('migration rejects malformed or mismatched batch filenames',()=>{
   assert.throws(()=>validateBatchFilenameAndRows('general_mixed_001.json',[{...question(1),subcategory_id:99}],categories,subcategories),/subcategory_id 10/);
 });
 
+test('migration accepts English names in questions and answers',()=>{
+  assert.deepEqual(validateQuestionRow({...question(1),question:'ما اسم لعبة Minecraft؟',answer:'Minecraft'},{filename:'general_mixed_001.json',rowNumber:1,subcategoryId:10}),[]);
+});
+
 test('migration quality feedback identifies the exact invalid character and row',()=>{
-  const errors=validateQuestionRow({...question(1722),question:'سؤال Avatar'},{
+  const errors=validateQuestionRow({...question(1722),question:'سؤال 漢'},{
     filename:'movies_avatar_001.json',
     rowNumber:2,
     subcategoryId:10,
   });
   assert.equal(errors.length,1);
   assert.match(errors[0],/row 2 \(id 1722\), question/);
-  assert.match(errors[0],/"A" \(U\+0041\)/);
-  assert.match(errors[0],/Arabic wording/);
+  assert.match(errors[0],/"漢" \(U\+6F22\)/);
+  assert.match(errors[0],/Arabic or Latin letters/);
 });
 
 test('migration report explains that failures make no changes',()=>{
