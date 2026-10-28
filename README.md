@@ -287,7 +287,7 @@ Two distinct questions are needed per selected attempt per team: 2 for one attem
 
 ## Add or update content
 
-The source tables in `database/` are authoritative. The local, Git-ignored `questions/QUESTION_BANK_GUIDE.md` combines the generation guide, naming rules, catalog and current question inventory; `scripts/question-guide-template.txt` supplies its guide text. The inventory is regenerated after a successful migration and should not be edited by hand. If the local `questions/` folder is absent, restore it before using the batch workflow.
+The source tables in `database/` are authoritative. `database/QUESTION_BANK_GUIDE.md` combines the generation guide, naming rules, catalog and current question inventory; `scripts/question-guide-template.txt` supplies its guide text. Keep the guide in sync when updating the question bank. A successful local migration regenerates the guide, replacing uploaded or manual edits. If the local `questions/` folder is absent, restore it before using the batch workflow.
 
 1. Read the guide and current bank; preserve existing categories, IDs and relationships. Allocate globally unique question IDs after the current maximum.
 2. Place each reviewed JSON array in `questions/new/`, named `category-slug_subcategory-slug_batch-number.json` (for example, `football_players_002.json`). The guide describes the schema and editorial rules.

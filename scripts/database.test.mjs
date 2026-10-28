@@ -1,7 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
 import {compileDatabase} from './database.mjs';
-import {buildQuestionList,formatInspection,inspectMigration,validateBatchFilenameAndRows,validateQuestionRow} from './migrate-questions.mjs';
+import {buildQuestionList,formatInspection,inspectMigration,migrateQuestions,validateBatchFilenameAndRows,validateQuestionRow} from './migrate-questions.mjs';
 const categories=[{id:1,slug:'general',name:'معلومات عامة'}];
 const subcategories=[{id:10,category_id:1,slug:'mixed',name:'منوعات'}];
 const question=id=>({id,subcategory_id:10,type:'normal',points:200,difficultyLevel:1,question:`سؤال ${id}`,answer:'إجابة',format:'text',image_path:null,audio_path:null});
@@ -109,4 +112,15 @@ test('migration explains when the project questions folder was moved or removed'
     'questions: folder not found in the project. Restore it at <project>/questions before running question migration.',
   ]);
   assert.match(formatInspection(report),/Nothing was migrated/);
+});
+
+test('migration regenerates the guide in the database directory',()=>{
+  const root=mkdtempSync(join(tmpdir(),'trivia-migration-guide-'));
+  mkdirSync(join(root,'database'));mkdirSync(join(root,'questions','new'),{recursive:true});
+  for(const [name,rows] of [['categories',categories],['subcategories',subcategories],['questions',[question(1)]]])writeFileSync(join(root,'database',`${name}.json`),JSON.stringify(rows));
+  writeFileSync(join(root,'questions','new','general_mixed_001.json'),JSON.stringify([question(2)]));
+  const report=migrateQuestions(root);assert.deepEqual(report.errors,[]);assert.equal(report.migrated,true);
+  const guide=readFileSync(join(root,'database','QUESTION_BANK_GUIDE.md'),'utf8');
+  assert.match(guide,/Total migrated questions: \*\*2\*\*/);assert.match(guide,/database\/QUESTION_BANK_GUIDE\.md/);
+  assert.equal(existsSync(join(root,'questions','QUESTION_BANK_GUIDE.md')),false);
 });

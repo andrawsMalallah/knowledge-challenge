@@ -1,6 +1,6 @@
 # Knowledge Challenge — Question Generation Handoff
 
-This guide and question inventory are generated from the current source tables. Read the inventory below and recheck the source tables before allocating IDs. Do not edit the generated document directly.
+This guide and question inventory describe the current source tables. Read the inventory below and recheck the source tables before allocating IDs. When adding questions, update this guide alongside the source data. A successful local migration regenerates it from the current tables.
 
 ## 1. Your task and scope
 
@@ -10,9 +10,9 @@ The owner expects the bank to grow to tens of thousands of questions or more. Th
 
 Produce content only. Do not change application code, schemas, validation rules, dependencies, CI, or hosting to make content pass. Do not commit or push unless explicitly instructed.
 
-Place each generated batch as a standalone JSON array in `questions/new/`. Name it exactly `category-slug_subcategory-slug_batch-number.json`, for example `football_players_001.json`. Use the stable slugs from this guide, separate the three parts with underscores, and use a positive batch number padded to at least three digits. Every normal row in the file must reference the subcategory named by the filename; tiebreaker rows may use `subcategory_id:null` in the same batch.
+When the owner asks for updated source files, add the reviewed questions to `database/questions.json` and update the inventory in `database/QUESTION_BANK_GUIDE.md` to match. Preserve existing rows, assign unique IDs, and return both complete files. For the local batch workflow, place each batch as a standalone JSON array in `questions/new/` named `category-slug_subcategory-slug_batch-number.json`, such as `football_players_001.json`. Every normal row must reference the subcategory named by the filename; tiebreaker rows may use `subcategory_id:null`.
 
-After review, the owner migrates accepted batches with `npm run migrate:questions`. Migration validates the filename and its category/subcategory relationship, merges the rows into `database/questions.json`, moves their source files to `questions/migrated/`, and regenerates `questions/QUESTION_BANK_GUIDE.md`. Read this guide and its inventory before generating so you can avoid existing facts and near-duplicates.
+For local batches, after review, the owner migrates accepted batches with `npm run migrate:questions`. Migration validates the filename and its category/subcategory relationship, merges the rows into `database/questions.json`, moves their source files to `questions/migrated/`, and regenerates `database/QUESTION_BANK_GUIDE.md`. Read this guide and its inventory before generating so you can avoid existing facts and near-duplicates.
 
 Run `npm run migrate:questions:check` first for a read-only quality report. It prints PASS/FAIL for every pending file and identifies bad rows, fields, characters, duplicate IDs/prompts, filename mismatches, and schema problems. It never changes or moves files. The regular migration command runs the same preflight and makes no changes if any problem is found.
 

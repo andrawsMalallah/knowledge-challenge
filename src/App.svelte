@@ -1,5 +1,26 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import AdminPanel from './components/AdminPanel.svelte';
+  import AdminLogin from './components/AdminLogin.svelte';
+  import type { Snapshot as AdminSnapshot } from './services/admin';
+  let adminRoute = $state(window.location.hash);
+  let adminToken = $state('');
+  let adminSnapshot = $state.raw<AdminSnapshot>();
+  function navigateAdmin(route:string) { window.location.hash=route;adminRoute=route; }
+  function logoutAdmin() { adminToken='';adminSnapshot=undefined;navigateAdmin('#/'); }
+  $effect(()=>{
+    const update=()=>{
+      let route=window.location.hash;
+      if(route==='#/admin' && (!adminToken || !adminSnapshot)){
+        route='#/admin/login';window.history.replaceState(null,'',route);
+      }
+      if(route!=='#/admin' && route!=='#/admin/login'){adminToken='';adminSnapshot=undefined;}
+      adminRoute=route;
+    };
+    update();
+    window.addEventListener('hashchange',update);
+    return ()=>window.removeEventListener('hashchange',update);
+  });
   import { deferredUpdateVersion, deferUpdate } from './services/appUpdates';
   import type { AppUpdate } from './services/appUpdates';
   import ActionButton from './components/ActionButton.svelte';
@@ -537,6 +558,13 @@
   });
 </script>
 <svelte:head><title>تحدي المعرفة</title></svelte:head>
+{#if adminRoute === '#/admin/login' || adminRoute === '#/admin'}
+  {#if adminRoute === '#/admin' && adminToken && adminSnapshot}
+    <AdminPanel token={adminToken} initialSnapshot={adminSnapshot} onlogout={logoutAdmin}/>
+  {:else}
+    <AdminLogin onback={logoutAdmin} onlogin={(token,snapshot)=>{adminToken=token;adminSnapshot=snapshot;navigateAdmin('#/admin');}}/>
+  {/if}
+{:else}
 <ConfirmationModal bind:this={confirmationModal}/>
 <QuestionHistoryModal bind:this={questionHistoryModal} count={usedQuestionCount} onReset={resetUsedQuestionHistory} disabled={busy || confirmationPending}/>
 {#if controlState !== 'owner'}
@@ -555,6 +583,7 @@
   <header class="app-navbar">
     <strong class="brand">✦ تحدي المعرفة</strong>
     <nav class="navbar-actions" aria-label="أدوات التطبيق">
+      <button type="button" class="navbar-icon-button" aria-label="إدارة الأسئلة" title="إدارة الأسئلة" disabled={screen!=='home' || busy || !!pendingSave || confirmationPending} onclick={()=>navigateAdmin('#/admin/login')}>⚙</button>
       <BackupIconButton icon="history" label="سجل الأسئلة المستخدمة" hint={screen==='home'?'سجل الأسئلة المستخدمة':'سجل الأسئلة المستخدمة — من الرئيسية فقط'} onclick={()=>void questionHistoryModal?.show()} disabled={screen!=='home' || busy || !!pendingSave || confirmationPending}/>
       <BackupIconButton icon="import" label="استيراد نسخة احتياطية" hint={screen==='home'?'استيراد نسخة احتياطية':'استيراد نسخة احتياطية — من الرئيسية فقط'} onclick={()=>importInput?.click()} disabled={screen!=='home' || busy || !!pendingSave || confirmationPending}/>
       <BackupIconButton icon="export" label="تصدير نسخة احتياطية" onclick={downloadBackup} disabled={busy || !!pendingSave || confirmationPending}/>
@@ -637,3 +666,5 @@
   <footer>تحدي المعرفة · كل سؤال فرصة للفوز</footer>
 </main>
 </div>
+
+{/if}
