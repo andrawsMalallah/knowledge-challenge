@@ -1234,5 +1234,17 @@
     "category_id": 2,
     "slug": "guess-player-number",
     "name": "خمن رقم اللاعب"
+  },
+  {
+    "id": 207,
+    "category_id": 2,
+    "slug": "guess-common-teammate",
+    "name": "خمن اللاعب المشترك"
+  },
+  {
+    "id": 208,
+    "category_id": 4,
+    "slug": "guess-title-from-location",
+    "name": "خمن العمل من مكانه"
   }
 ]
