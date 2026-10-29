@@ -1144,5 +1144,95 @@
     "category_id": 27,
     "slug": "guess-record",
     "name": "خمن الرقم القياسي"
+  },
+  {
+    "id": 192,
+    "category_id": 1,
+    "slug": "arabic-culture-first-letter",
+    "name": "حرف البداية: ثقافة عربية"
+  },
+  {
+    "id": 193,
+    "category_id": 1,
+    "slug": "english-culture-first-letter",
+    "name": "حرف البداية: ثقافة إنجليزية"
+  },
+  {
+    "id": 194,
+    "category_id": 1,
+    "slug": "put-in-order",
+    "name": "رتب"
+  },
+  {
+    "id": 195,
+    "category_id": 10,
+    "slug": "guess-flag-colors",
+    "name": "خمن ألوان العلم"
+  },
+  {
+    "id": 196,
+    "category_id": 28,
+    "slug": "general",
+    "name": "بدون كلام: عام"
+  },
+  {
+    "id": 197,
+    "category_id": 28,
+    "slug": "football",
+    "name": "بدون كلام: كرة قدم"
+  },
+  {
+    "id": 198,
+    "category_id": 28,
+    "slug": "movies-and-tv",
+    "name": "بدون كلام: أفلام ومسلسلات"
+  },
+  {
+    "id": 199,
+    "category_id": 28,
+    "slug": "anime",
+    "name": "بدون كلام: أنمي"
+  },
+  {
+    "id": 200,
+    "category_id": 1,
+    "slug": "reversed-arabic-word",
+    "name": "الكلمة المعكوسة"
+  },
+  {
+    "id": 201,
+    "category_id": 14,
+    "slug": "guess-english-song-lyrics",
+    "name": "خمن الأغنية من كلماتها: إنجليزي"
+  },
+  {
+    "id": 202,
+    "category_id": 14,
+    "slug": "complete-song-lyrics",
+    "name": "أكمل كلمات الأغنية"
+  },
+  {
+    "id": 203,
+    "category_id": 2,
+    "slug": "guess-goal-scorer",
+    "name": "من سجّل الهدف؟"
+  },
+  {
+    "id": 204,
+    "category_id": 3,
+    "slug": "bodybuilding",
+    "name": "بناء الأجسام"
+  },
+  {
+    "id": 205,
+    "category_id": 12,
+    "slug": "guess-animal-from-facts",
+    "name": "خمن الحيوان من معلوماته"
+  },
+  {
+    "id": 206,
+    "category_id": 2,
+    "slug": "guess-player-number",
+    "name": "خمن رقم اللاعب"
   }
 ]

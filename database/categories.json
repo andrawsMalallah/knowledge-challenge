@@ -2,7 +2,7 @@
   {
     "id": 1,
     "slug": "general-knowledge",
-    "name": "معلومات عامة"
+    "name": "عام"
   },
   {
     "id": 2,
@@ -133,5 +133,10 @@
     "id": 27,
     "slug": "strange-facts-and-records",
     "name": "حقائق غريبة وأرقام قياسية"
+  },
+  {
+    "id": 28,
+    "slug": "without-words",
+    "name": "بدون كلام"
   }
 ]
