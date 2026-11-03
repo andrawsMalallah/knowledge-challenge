@@ -1,6 +1,6 @@
 node_modules/
 dist/
-output/
+/output/
 *.tsbuildinfo
 .env
 .env.*
@@ -10,6 +10,7 @@ output/
 docs/QUESTION_BANK_VALIDATION.json
 *.log
 
-.generated/
-.playwright-cli/
+# Recreated by Vite; root-only local artifacts and retired batch folders.
+/.generated/
+/.playwright-cli/
 /questions/

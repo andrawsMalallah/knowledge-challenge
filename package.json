@@ -9,8 +9,8 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json",
     "validate:bank": "node scripts/validate-bank.mjs",
-    "migrate:questions": "node scripts/migrate-questions.mjs",
-    "migrate:questions:check": "node scripts/migrate-questions.mjs --dry-run"
+    "generate:guide": "node scripts/generate-guide.mjs",
+    "generate:guide:check": "node scripts/generate-guide.mjs --check"
   },
   "engines": {
     "node": ">=24.0.0"

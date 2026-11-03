@@ -48,14 +48,14 @@ Open http://127.0.0.1:4173/. Production preview enables the PWA/service worker a
 | `npm ci` | Install exactly the dependencies in `package-lock.json`. |
 | `npm run dev` | Start Vite development mode. |
 | `npm run validate:bank` | Validate the catalog and question files; regenerate the local validation report. |
-| `npm run migrate:questions:check` | Check pending batches without changing files. |
-| `npm run migrate:questions` | Validate and migrate pending batches, archive them, and regenerate the question guide. |
+| `npm run generate:guide:check` | Validate source tables and check that the guide is current without changing files. |
+| `npm run generate:guide` | Validate source tables and regenerate `database/QUESTION_BANK_GUIDE.md`. |
 | `npm run check` | Check Svelte and strict TypeScript, including unused locals and parameters. |
 | `npm run build` | Validate content, run the type/Svelte check, then generate `dist/`. |
 | `npm run preview -- --host 127.0.0.1 --port 4173 --strictPort` | Serve the production build locally. |
 | `npm audit` | Check the locked dependencies against npm advisories. |
 
-The historical gameplay test suite and GitHub CI remain absent. Focused database migration checks use Node's built-in test runner: `node --test scripts/database.test.mjs`. No test dependency is needed. The build blocks invalid content and type/Svelte errors.
+The historical gameplay test suite and GitHub CI remain absent. Focused database, guide, history and admin checks use Node's built-in test runner: `node --test scripts/database.test.mjs scripts/question-history.test.mjs scripts/admin.test.ts`. No test dependency is needed. The build blocks invalid content and type/Svelte errors.
 
 ## How a match works
 
@@ -287,16 +287,18 @@ Two distinct questions are needed per selected attempt per team: 2 for one attem
 
 ## Add or update content
 
-The source tables in `database/` are authoritative. `database/QUESTION_BANK_GUIDE.md` combines the generation guide, naming rules, catalog and current question inventory; `scripts/question-guide-template.txt` supplies its guide text. Keep the guide in sync when updating the question bank. A successful local migration regenerates the guide, replacing uploaded or manual edits. If the local `questions/` folder is absent, restore it before using the batch workflow.
+The three JSON tables in `database/` are authoritative. `database/QUESTION_BANK_GUIDE.md` combines editorial instructions with a catalog and complete question inventory generated from those tables. The shared renderer is `src/services/questionGuide.mjs`; editorial instructions live in `src/services/questionGuideTemplate.mjs`. Do not edit the generated guide manually.
 
-1. Read the guide and current bank; preserve existing categories, IDs and relationships. Allocate globally unique question IDs after the current maximum.
-2. Place each reviewed JSON array in `questions/new/`, named `category-slug_subcategory-slug_batch-number.json` (for example, `football_players_002.json`). The guide describes the schema and editorial rules.
-3. Run `npm run migrate:questions:check`. It reports batch and row errors without changing files. An empty `new/` folder means there are no batches to check.
-4. After reviewing the batches, run `npm run migrate:questions`. It validates again, merges them into `database/questions.json`, regenerates the combined guide and moves the batches to `questions/migrated/`.
-5. Run `npm run validate:bank`, `node --test scripts/database.test.mjs`, and `npm run build`. Review `docs/QUESTION_BANK_VALIDATION.json` for playability warnings.
+1. Read the guide and current bank. Preserve existing rows, IDs and relationships; allocate globally unique IDs for additions.
+2. Edit the complete JSON arrays locally, or upload replacement JSON files through the in-game admin panel. There is no batch directory or migration step.
+3. For local edits, run `npm run generate:guide`. It validates all three tables before writing the guide and never changes the JSON files.
+4. Run `npm run generate:guide:check` to validate the tables and check that the guide matches. A missing or stale guide fails without writing files.
+5. Run `npm run validate:bank`, `node --test scripts/database.test.mjs scripts/question-history.test.mjs scripts/admin.test.ts`, and `npm run build`. Review `docs/QUESTION_BANK_VALIDATION.json` for playability warnings.
 6. Preview the production build and check category selection and a new match. Existing matches retain frozen content; start a new game to use updated questions.
 
-Structural checks do not verify facts or catch all semantic duplicates. Research and editorial review remain necessary. Development and builds regenerate `.generated/public/`; commit source tables and assets only when publication is authorized.
+Admin publishing regenerates the guide from the combined uploaded and unchanged JSON tables, then publishes changed JSON files and the guide in one guarded Git commit after confirmation. Guide downloads remain available; separate guide uploads are no longer needed.
+
+Structural checks do not verify facts or catch all semantic duplicates. Development and builds recreate `.generated/public/`; commit source tables and assets only when publication is authorized.
 
 ## Build and release checks
 
@@ -304,6 +306,7 @@ Before publishing:
 
 ```powershell
 npm ci
+npm run generate:guide:check
 npm run validate:bank
 npm run check
 npm run build

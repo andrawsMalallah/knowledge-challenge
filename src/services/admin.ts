@@ -1,3 +1,4 @@
+import { buildQuestionList } from './questionGuide.mjs';
 import { parseCategoryTree, parseQuestionFile } from './contentSchema.mjs';
 import type { AdminBank, AdminCategory, AdminQuestion, AdminSubcategory } from '../types/admin';
 
@@ -107,14 +108,15 @@ export function validateBank(bank: AdminBank): void {
     }
   }
 }
-export async function publishBank(token:string, snapshot:Snapshot, bank:AdminBank, guide:string | null = snapshot.guide):Promise<string> {
+export async function publishBank(token:string, snapshot:Snapshot, bank:AdminBank):Promise<string> {
   validateBank(bank);
   const current = await github<{object:{sha:string}}>(token, '/git/ref/heads/main');
   if (current.object.sha !== snapshot.head) throw new Error('تغير المستودع منذ تحميله. نزّل ملفات المسودة ثم أعد التحميل لتجنب فقدان التغييرات.');
   const data = [bank.categories, bank.subcategories, bank.questions];
   const original = [snapshot.bank.categories, snapshot.bank.subcategories, snapshot.bank.questions];
   const changed: {path:string;content:string;unchanged:boolean}[] = data.map((rows,index)=>({path:paths[index],content:JSON.stringify(rows,null,2)+'\n',unchanged:JSON.stringify(rows)===JSON.stringify(original[index])})).filter(entry=>!entry.unchanged);
-  if (guide !== null && guide !== snapshot.guide) changed.push({path:'database/QUESTION_BANK_GUIDE.md',content:guide,unchanged:false});
+  const guide = buildQuestionList(bank.categories, bank.subcategories, bank.questions);
+  if (guide !== snapshot.guide) changed.push({path:'database/QUESTION_BANK_GUIDE.md',content:guide,unchanged:false});
   if (!changed.length) throw new Error('لا توجد تغييرات للنشر');
   const changes = await Promise.all(changed.map(async ({path,content}) => {
     const blob = await github<{sha:string}>(token, '/git/blobs', {method:'POST',body:JSON.stringify({content:encodeBase64(content),encoding:'base64'})});
@@ -137,10 +139,3 @@ export async function readReplacement(file:File, table:BankTable):Promise<unknow
   return data;
 }
 export const guideFilename = 'QUESTION_BANK_GUIDE.md';
-export async function readGuideReplacement(file:File):Promise<string> {
-  if (file.name !== guideFilename) throw new Error(`اسم الملف غير مطابق. اختر ${guideFilename}`);
-  if (file.size > 15 * 1024 * 1024) throw new Error('حجم الملف يتجاوز 15 ميغابايت');
-  const guide=await file.text();
-  if (!guide.trim()) throw new Error('ملف الدليل فارغ');
-  return guide;
-}

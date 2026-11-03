@@ -1,6 +1,7 @@
+import { buildQuestionList } from '../src/services/questionGuide.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { validateBank, loadBank, publishBank, readReplacement, readGuideReplacement } from '../src/services/admin.ts';
+import { validateBank, loadBank, publishBank, readReplacement } from '../src/services/admin.ts';
 import type { AdminBank } from '../src/types/admin.ts';
 
 const bank: AdminBank = {
@@ -44,7 +45,7 @@ test('publishes one changed table in one non-forced commit',async()=>{
     const result=await publishBank('test-token',{bank,guide:'old guide',head:'head',tree:'tree'},changed);
     assert.equal(result,'new-commit');
     const tree=requests.find(request=>request.url.endsWith('/git/trees'))!.body;
-    assert.equal(tree.base_tree,'tree');assert.deepEqual(tree.tree.map((item:{path:string})=>item.path),['database/questions.json']);
+    assert.equal(tree.base_tree,'tree');assert.deepEqual(tree.tree.map((item:{path:string})=>item.path),['database/questions.json','database/QUESTION_BANK_GUIDE.md']);
     const blob=requests.find(request=>request.url.endsWith('/git/blobs'))!.body;
     assert.equal(JSON.parse(Buffer.from(blob.content,'base64').toString('utf8'))[1].question,'سؤال جديد');
     const update=requests.find(request=>request.url.endsWith('/git/refs/heads/main'))!.body;
@@ -52,12 +53,6 @@ test('publishes one changed table in one non-forced commit',async()=>{
   } finally {globalThis.fetch=previous;}
 });
 
-test('guide upload requires its exact filename and non-empty content',async()=>{
-  const guide='دليل الأسئلة\n';
-  assert.equal(await readGuideReplacement(new File([guide],'QUESTION_BANK_GUIDE.md')),guide);
-  await assert.rejects(readGuideReplacement(new File([guide],'guide.md')),/اسم الملف غير مطابق/);
-  await assert.rejects(readGuideReplacement(new File(['  '],'QUESTION_BANK_GUIDE.md')),/فارغ/);
-});
 test('publishes the questions and guide together in the same tree',async()=>{
   const previous=globalThis.fetch;const requests:{url:string;body:any}[]=[];let counter=0;
   globalThis.fetch=async(input,init)=>{
@@ -71,13 +66,66 @@ test('publishes the questions and guide together in the same tree',async()=>{
   };
   try {
     const changed:AdminBank={...bank,questions:[...bank.questions,{...bank.questions[0],id:2,question:'سؤال جديد'}]};
-    await publishBank('test-token',{bank,guide:'old guide',head:'head',tree:'tree'},changed,'دليل جديد');
+    await publishBank('test-token',{bank,guide:'old guide',head:'head',tree:'tree'},changed);
     const tree=requests.find(request=>request.url.endsWith('/git/trees'))!.body;
     assert.deepEqual(tree.tree.map((item:{path:string})=>item.path),['database/questions.json','database/QUESTION_BANK_GUIDE.md']);
     const contents=requests.filter(request=>request.url.endsWith('/git/blobs')).map(request=>Buffer.from(request.body.content,'base64').toString('utf8'));
-    assert.ok(contents.includes('دليل جديد'));
+    assert.ok(contents.includes(buildQuestionList(changed.categories,changed.subcategories,changed.questions)));
     assert.equal(requests.filter(request=>request.url.endsWith('/git/refs/heads/main')).length,1);
   } finally {globalThis.fetch=previous;}
+});
+
+test('category and subcategory uploads regenerate the catalog and inventory together', async () => {
+  const previous = globalThis.fetch;
+  const contents: string[] = [];
+  let publishedPaths: string[] = [];
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    const body = init?.body ? JSON.parse(String(init.body)) : undefined;
+    if (url.endsWith('/git/ref/heads/main')) return Response.json({ object: { sha: 'head' } });
+    if (url.endsWith('/git/blobs')) {
+      contents.push(Buffer.from(body.content, 'base64').toString('utf8'));
+      return Response.json({ sha: `blob-${contents.length}` });
+    }
+    if (url.endsWith('/git/trees')) {
+      publishedPaths = body.tree.map((entry: { path: string }) => entry.path);
+      return Response.json({ sha: 'new-tree' });
+    }
+    if (url.endsWith('/git/commits')) return Response.json({ sha: 'new-commit' });
+    if (url.endsWith('/git/refs/heads/main')) return Response.json({});
+    throw new Error('Unexpected request');
+  };
+  try {
+    const changed: AdminBank = {
+      ...bank,
+      categories: [{ ...bank.categories[0], name: 'تصنيف محدث', slug: 'updated' }],
+      subcategories: [{ ...bank.subcategories[0], name: 'فرع محدث', slug: 'renamed' }],
+    };
+    await publishBank('test-token', { bank, guide: 'old guide', head: 'head', tree: 'tree' }, changed);
+    assert.deepEqual(publishedPaths, ['database/categories.json', 'database/subcategories.json', 'database/QUESTION_BANK_GUIDE.md']);
+    const guide = contents.find(content => content.startsWith('# Knowledge Challenge'))!;
+    assert.equal(guide, buildQuestionList(changed.categories, changed.subcategories, changed.questions));
+    assert.match(guide, /تصنيف محدث \/ فرع محدث/);
+    assert.match(guide, /Slug: `updated`/);
+    assert.match(guide, /\| 1 \| 200 \| 1 \| ما العاصمة؟ \| بغداد \|/);
+  } finally { globalThis.fetch = previous; }
+});
+
+test('invalid uploads and unchanged current content never create remote objects', async () => {
+  const previous = globalThis.fetch;
+  let requests = 0;
+  globalThis.fetch = async (_input, init) => {
+    requests++;
+    assert.equal(init?.method, undefined);
+    return Response.json({ object: { sha: 'head' } });
+  };
+  try {
+    const snapshot = { bank, guide: buildQuestionList(bank.categories, bank.subcategories, bank.questions), head: 'head', tree: 'tree' };
+    await assert.rejects(publishBank('test-token', snapshot, { ...bank, questions: [bank.questions[0], bank.questions[0]] }), /معرف/);
+    assert.equal(requests, 0);
+    await assert.rejects(publishBank('test-token', snapshot, bank), /لا توجد تغييرات/);
+    assert.equal(requests, 1);
+  } finally { globalThis.fetch = previous; }
 });
 test('loads the current UTF-8 guide alongside the database',async()=>{
   const previous=globalThis.fetch;const entries=[['categories',bank.categories],['subcategories',bank.subcategories],['questions',bank.questions],['guide','دليل الأسئلة']];
@@ -122,7 +170,7 @@ test('creates the guide in one commit when it was previously missing',async()=>{
     if(url.endsWith('/git/refs/heads/main'))return Response.json({object:{sha:'new-commit'}});
     throw Error('Unexpected request');
   };
-  try{await publishBank('test-token',{bank,guide:null,head:'head',tree:'tree'},bank,'دليل جديد');assert.deepEqual(tree.tree.map((item:{path:string})=>item.path),['database/QUESTION_BANK_GUIDE.md']);}
+  try{await publishBank('test-token',{bank,guide:null,head:'head',tree:'tree'},bank);assert.deepEqual(tree.tree.map((item:{path:string})=>item.path),['database/QUESTION_BANK_GUIDE.md']);}
   finally{globalThis.fetch=previous;}
 });
 

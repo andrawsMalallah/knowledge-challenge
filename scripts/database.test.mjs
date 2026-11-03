@@ -1,10 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync} from 'node:fs';
+import {mkdtempSync,mkdirSync,readFileSync,writeFileSync,existsSync,rmSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {compileDatabase} from './database.mjs';
-import {buildQuestionList,formatInspection,inspectMigration,migrateQuestions,validateBatchFilenameAndRows,validateQuestionRow} from './migrate-questions.mjs';
+import {buildQuestionList} from '../src/services/questionGuide.mjs';
+import {generateGuide} from './generate-guide.mjs';
 const categories=[{id:1,slug:'general',name:'معلومات عامة'}];
 const subcategories=[{id:10,category_id:1,slug:'mixed',name:'منوعات'}];
 const question=id=>({id,subcategory_id:10,type:'normal',points:200,difficultyLevel:1,question:`سؤال ${id}`,answer:'إجابة',format:'text',image_path:null,audio_path:null});
@@ -48,7 +49,7 @@ test('normalized duplicate prompts across chunk boundaries are rejected',()=>{
   assert.throws(()=>compileDatabase(categories,subcategories,rows),/Duplicate question/);
 });
 
-test('migrated question list contains every normal and tiebreaker question',()=>{
+test('generated question list contains every normal and tiebreaker question',()=>{
   const questions=[
     question(1),
     {...question(2),type:'tiebreaker',subcategory_id:null,points:0,difficultyLevel:5},
@@ -57,70 +58,62 @@ test('migrated question list contains every normal and tiebreaker question',()=>
   assert.match(list,/Question Generation Handoff/);
   assert.match(list,/Expansion and research policy/);
   assert.match(list,/Current Question Bank/);
-  assert.match(list,/Total migrated questions: \*\*2\*\* \(1 normal, 1 tiebreakers\)/);
-  assert.match(list,/Question IDs: \*\*1-2\*\*\. Next available ID: \*\*3\*\*/);
+  assert.match(list,/Total questions: \*\*2\*\* \(1 normal, 1 tiebreakers\)/);
+  assert.match(list,/Highest question ID: \*\*2\*\*\. Next available ID: \*\*3\*\*/);
   assert.match(list,/Playable subcategories: \*\*0\/1\*\*/);
   assert.match(list,/\| 1 \| 200 \| 1 \| سؤال 1 \| إجابة \|/);
   assert.match(list,/\| 2 \| 5 \| سؤال 2 \| إجابة \|/);
 });
 
-test('migration batch filename identifies the related category and subcategory',()=>{
-  const result=validateBatchFilenameAndRows('general_mixed_001.json',[question(1)],categories,subcategories);
-  assert.equal(result.batchNumber,1);
-  assert.equal(result.category.id,1);
-  assert.equal(result.subcategory.id,10);
+test('catalog follows uploaded names, slugs, and empty subcategories', () => {
+  const list = buildQuestionList(
+    [{ id: 7, slug: 'updated', name: 'اسم جديد' }],
+    [{ id: 20, category_id: 7, slug: 'empty', name: 'فرع فارغ' }],
+    [],
+  );
+  assert.match(list, /Category 7: اسم جديد/);
+  assert.match(list, /Slug: `updated`/);
+  assert.match(list, /\| 20 \| فرع فارغ \| `empty` \|/);
+  assert.match(list, /Highest question ID: \*\*0\*\*/);
+  assert.doesNotMatch(list, /Category 1: معلومات عامة/);
 });
 
-test('migration rejects malformed or mismatched batch filenames',()=>{
-  assert.throws(()=>validateBatchFilenameAndRows('general-mixed-001.json',[question(1)],categories,subcategories),/expected/);
-  assert.throws(()=>validateBatchFilenameAndRows('general_mixed_000.json',[question(1)],categories,subcategories),/positive/);
-  assert.throws(()=>validateBatchFilenameAndRows('missing_mixed_001.json',[question(1)],categories,subcategories),/unknown category/);
-  assert.throws(()=>validateBatchFilenameAndRows('general_missing_001.json',[question(1)],categories,subcategories),/not a subcategory/);
-  assert.throws(()=>validateBatchFilenameAndRows('general_mixed_001.json',[{...question(1),subcategory_id:99}],categories,subcategories),/subcategory_id 10/);
+test('guide escapes table cells and sorts questions without mutating input', () => {
+  const rows = [question(9), { ...question(3), question: 'سؤال | جديد\nآخر' }];
+  const before = structuredClone(rows);
+  const list = buildQuestionList(categories, subcategories, rows);
+  assert.ok(list.includes('سؤال \\| جديد آخر'));
+  assert.ok(list.indexOf('| 3 | 200') < list.indexOf('| 9 | 200'));
+  assert.match(list, /Next available ID: \*\*10\*\*/);
+  assert.deepEqual(rows, before);
 });
 
-test('migration accepts English names in questions and answers',()=>{
-  assert.deepEqual(validateQuestionRow({...question(1),question:'ما اسم لعبة Minecraft؟',answer:'Minecraft'},{filename:'general_mixed_001.json',rowNumber:1,subcategoryId:10}),[]);
-});
-
-test('migration quality feedback identifies the exact invalid character and row',()=>{
-  const errors=validateQuestionRow({...question(1722),question:'سؤال 漢'},{
-    filename:'movies_avatar_001.json',
-    rowNumber:2,
-    subcategoryId:10,
-  });
-  assert.equal(errors.length,1);
-  assert.match(errors[0],/row 2 \(id 1722\), question/);
-  assert.match(errors[0],/"漢" \(U\+6F22\)/);
-  assert.match(errors[0],/Arabic or Latin letters/);
-});
-
-test('migration report explains that failures make no changes',()=>{
-  const output=formatInspection({
-    files:[{filename:'general_mixed_001.json',total:1,normal:1,tiebreakers:0,tiers:{200:1,400:0,600:0},errors:['problem']}],
-    errors:['general_mixed_001.json: problem'],
-    incomingQuestions:[question(1)],
-  });
-  assert.match(output,/\[FAIL\].*normal tiers: 200=1, 400=0, 600=0/);
-  assert.match(output,/Nothing was migrated/);
-  assert.match(output,/npm run migrate:questions:check/);
-});
-
-test('migration explains when the project questions folder was moved or removed',()=>{
-  const report=inspectMigration('__definitely_missing_knowledge_challenge_root__');
-  assert.deepEqual(report.errors,[
-    'questions: folder not found in the project. Restore it at <project>/questions before running question migration.',
-  ]);
-  assert.match(formatInspection(report),/Nothing was migrated/);
-});
-
-test('migration regenerates the guide in the database directory',()=>{
-  const root=mkdtempSync(join(tmpdir(),'trivia-migration-guide-'));
-  mkdirSync(join(root,'database'));mkdirSync(join(root,'questions','new'),{recursive:true});
-  for(const [name,rows] of [['categories',categories],['subcategories',subcategories],['questions',[question(1)]]])writeFileSync(join(root,'database',`${name}.json`),JSON.stringify(rows));
-  writeFileSync(join(root,'questions','new','general_mixed_001.json'),JSON.stringify([question(2)]));
-  const report=migrateQuestions(root);assert.deepEqual(report.errors,[]);assert.equal(report.migrated,true);
-  const guide=readFileSync(join(root,'database','QUESTION_BANK_GUIDE.md'),'utf8');
-  assert.match(guide,/Total migrated questions: \*\*2\*\*/);assert.match(guide,/database\/QUESTION_BANK_GUIDE\.md/);
-  assert.equal(existsSync(join(root,'questions','QUESTION_BANK_GUIDE.md')),false);
+test('local generation only writes the guide and read-only checks detect stale content', context => {
+  const root = mkdtempSync(join(tmpdir(), 'trivia-guide-'));
+  context.after(() => rmSync(root, { recursive: true, force: true }));
+  mkdirSync(join(root, 'database'));
+  const sources = { categories, subcategories, questions: [question(1)] };
+  for (const [name, rows] of Object.entries(sources)) {
+    writeFileSync(join(root, 'database', `${name}.json`), JSON.stringify(rows));
+  }
+  const guidePath = join(root, 'database', 'QUESTION_BANK_GUIDE.md');
+  assert.deepEqual(generateGuide(root, { check: true }), { upToDate: false, written: false });
+  assert.equal(existsSync(guidePath), false);
+  assert.equal(generateGuide(root).written, true);
+  assert.equal(generateGuide(root, { check: true }).upToDate, true);
+  const expected = buildQuestionList(categories, subcategories, sources.questions);
+  assert.equal(readFileSync(guidePath, 'utf8'), expected);
+  writeFileSync(guidePath, expected.replaceAll('\n', '\r\n'));
+  assert.equal(generateGuide(root, { check: true }).upToDate, true);
+  writeFileSync(guidePath, 'stale');
+  assert.equal(generateGuide(root, { check: true }).upToDate, false);
+  assert.equal(readFileSync(guidePath, 'utf8'), 'stale');
+  generateGuide(root);
+  for (const [name, rows] of Object.entries(sources)) {
+    assert.equal(readFileSync(join(root, 'database', `${name}.json`), 'utf8'), JSON.stringify(rows));
+  }
+  writeFileSync(join(root, 'database', 'questions.json'), JSON.stringify([question(1), question(1)]));
+  assert.throws(() => generateGuide(root), /primary key/);
+  assert.equal(readFileSync(guidePath, 'utf8'), expected);
+  assert.equal(existsSync(join(root, 'questions')), false);
 });
